@@ -21,6 +21,7 @@ class SafeEvaluator:
     EVAL_ALLOWED_NODES = (
         ast.Expression,
         ast.Call,
+        ast.keyword,  # Allow keyword arguments in function calls
         ast.Name,
         ast.Load,
         ast.Constant,
