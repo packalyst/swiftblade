@@ -1,0 +1,16 @@
+# Include documentation
+include README.md
+include LICENSE
+include AUDIT_REPORT.md
+
+# Include package data
+recursive-include blade *.py
+recursive-include blade py.typed
+
+# Exclude tests and development files
+recursive-exclude tests *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+exclude .gitignore
+exclude test_*.py
+exclude *_test.py
