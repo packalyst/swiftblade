@@ -13,18 +13,6 @@ from pathlib import Path
 from functools import lru_cache
 
 from .base import BaseCacheInterface
-from ..constants import CACHE_KEY_SEPARATOR
-
-
-# Cached helper functions (module-level for LRU cache)
-@lru_cache(maxsize=2000)
-def _compute_context_hash_disk(context_str: str) -> str:
-    """
-    Compute hash for context string (cached)
-
-    Uses LRU cache to avoid recomputing hashes for identical contexts.
-    """
-    return hashlib.sha256(context_str.encode()).hexdigest()
 
 
 @lru_cache(maxsize=500)
@@ -83,26 +71,6 @@ class DiskCache(BaseCacheInterface):
         except Exception:
             pass
 
-    def _get_context_hash(self, context: Dict[str, Any]) -> str:
-        """
-        Generate hash from context keys AND values for cache key
-
-        Uses cached hash computation for performance.
-        """
-        if not context:
-            return _compute_context_hash_disk('')
-
-        # Sort items to ensure consistent hashing
-        # Use JSON for consistent serialization of complex values
-        try:
-            context_str = json.dumps(context, sort_keys=True, default=str)
-        except (TypeError, ValueError):
-            # Fallback: convert to string representation
-            items = sorted(context.items())
-            context_str = str(items)
-
-        return _compute_context_hash_disk(context_str)
-
     def _get_file_mtime(self, template_path: str) -> float:
         """
         Get file modification time (uses cached function)
@@ -111,11 +79,9 @@ class DiskCache(BaseCacheInterface):
         """
         return _get_file_mtime_cached_disk(template_path)
 
-    def _make_cache_key(self, template_path: str, context: Dict[str, Any]) -> str:
-        """Create unique cache key"""
-        context_hash = self._get_context_hash(context)
-        combined = f"{template_path}{CACHE_KEY_SEPARATOR}{context_hash}"
-        return hashlib.sha256(combined.encode()).hexdigest()
+    def _make_cache_key(self, template_path: str) -> str:
+        """Create unique cache key from template path"""
+        return hashlib.sha256(template_path.encode()).hexdigest()
 
     def _get_cache_file(self, cache_key: str) -> Path:
         """Get path to cache file"""
@@ -143,19 +109,17 @@ class DiskCache(BaseCacheInterface):
             oldest = min(cache_files, key=lambda f: f.stat().st_atime)
             oldest.unlink()
 
-    def get(self, template_path: str, context: Dict[str, Any] = None) -> Optional[str]:
+    def get(self, template_path: str) -> Optional[str]:
         """
-        Get cached template if valid
+        Get cached raw template if valid
 
         Args:
             template_path: Full path to template file
-            context: Template context (for cache key)
 
         Returns:
-            Cached content or None
+            Cached raw template content or None
         """
-        context = context or {}
-        cache_key = self._make_cache_key(template_path, context)
+        cache_key = self._make_cache_key(template_path)
         cache_file = self._get_cache_file(cache_key)
 
         if not cache_file.exists():
@@ -191,17 +155,15 @@ class DiskCache(BaseCacheInterface):
             self.misses += 1
             return None
 
-    def store(self, template_path: str, context: Dict[str, Any], content: str):
+    def store(self, template_path: str, content: str):
         """
-        Store rendered template in cache
+        Store raw template in cache
 
         Args:
             template_path: Full path to template file
-            context: Template context
-            content: Rendered content
+            content: Raw template content
         """
-        context = context or {}
-        cache_key = self._make_cache_key(template_path, context)
+        cache_key = self._make_cache_key(template_path)
         cache_file = self._get_cache_file(cache_key)
 
         # Evict if at capacity
@@ -216,7 +178,6 @@ class DiskCache(BaseCacheInterface):
         entry = {
             'content': content,
             'mtime': mtime,
-            'context_hash': self._get_context_hash(context),
         }
 
         try:
@@ -268,6 +229,6 @@ class DiskCache(BaseCacheInterface):
             "cache_dir": str(self.cache_dir),
         }
 
-    def is_cached(self, template_path: str, context: Dict[str, Any] = None) -> bool:
+    def is_cached(self, template_path: str) -> bool:
         """Check if template is cached and valid"""
-        return self.get(template_path, context) is not None
+        return self.get(template_path) is not None

@@ -170,44 +170,49 @@ class BladeEngine:
         context = prepare_context(context or {})
         template_path = self._resolve_template_path(template_name)
 
-        # Check cache first
+        # Try to get cached raw template content
+        raw_template = None
         if self.cache:
-            cached = self.cache.get(template_path, context)
-            if cached is not None:
-                return cached
+            raw_template = self.cache.get(template_path)
 
-        # Check if template exists
-        if not os.path.exists(template_path):
-            raise TemplateNotFoundException(
-                f"Template '{template_name}' not found",
-                template_name=template_name
-            )
-
-        # Check template size (DoS prevention)
-        try:
-            file_size = os.path.getsize(template_path)
-            if file_size > self.max_template_size:
-                from .exceptions import SecurityError
-                raise SecurityError(
-                    f"Template file too large: {file_size} bytes (max: {self.max_template_size})",
-                    context=template_name
+        # If not cached, load from disk
+        if raw_template is None:
+            # Check if template exists
+            if not os.path.exists(template_path):
+                raise TemplateNotFoundException(
+                    f"Template '{template_name}' not found",
+                    template_name=template_name
                 )
-        except SecurityError:
-            raise
-        except Exception:
-            pass  # If we can't get file size, proceed anyway
 
-        # Load template
-        try:
-            with open(template_path, "r", encoding=self.encoding) as f:
-                raw_template = f.read()
-        except Exception as e:
-            raise TemplateException(
-                f"Error reading template '{template_name}': {e}",
-                template_name=template_name
-            )
+            # Check template size (DoS prevention)
+            try:
+                file_size = os.path.getsize(template_path)
+                if file_size > self.max_template_size:
+                    from .exceptions import SecurityError
+                    raise SecurityError(
+                        f"Template file too large: {file_size} bytes (max: {self.max_template_size})",
+                        context=template_name
+                    )
+            except SecurityError:
+                raise
+            except Exception:
+                pass  # If we can't get file size, proceed anyway
 
-        # Parse and render
+            # Load template from disk
+            try:
+                with open(template_path, "r", encoding=self.encoding) as f:
+                    raw_template = f.read()
+            except Exception as e:
+                raise TemplateException(
+                    f"Error reading template '{template_name}': {e}",
+                    template_name=template_name
+                )
+
+            # Cache the RAW template content (not rendered output)
+            if self.cache:
+                self.cache.store(template_path, raw_template)
+
+        # Parse and render with current context (always re-render with fresh data)
         try:
             rendered = self.parser.parse(raw_template, context)
         except TemplateException:
@@ -217,10 +222,6 @@ class BladeEngine:
                 f"Error rendering template '{template_name}': {e}",
                 template_name=template_name
             )
-
-        # Cache result
-        if self.cache:
-            self.cache.store(template_path, context, rendered)
 
         return rendered
 

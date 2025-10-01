@@ -6,25 +6,10 @@ Fast but doesn't persist across restarts
 
 import os
 import time
-import hashlib
-import json
 from typing import Optional, Dict, Any
 from functools import lru_cache
 
 from .base import BaseCacheInterface, CacheEntry
-from ..constants import CACHE_KEY_SEPARATOR
-
-
-# Cached helper functions (module-level for LRU cache)
-@lru_cache(maxsize=2000)
-def _compute_context_hash(context_str: str) -> str:
-    """
-    Compute hash for context string (cached)
-
-    Uses LRU cache to avoid recomputing hashes for identical contexts.
-    Particularly useful when the same context is used repeatedly.
-    """
-    return hashlib.sha256(context_str.encode()).hexdigest()
 
 
 @lru_cache(maxsize=500)
@@ -61,26 +46,6 @@ class MemoryCache(BaseCacheInterface):
         self.hits = 0
         self.misses = 0
 
-    def _get_context_hash(self, context: Dict[str, Any]) -> str:
-        """
-        Generate hash from context keys AND values for cache key
-
-        Uses cached hash computation for performance.
-        """
-        if not context:
-            return _compute_context_hash('')
-
-        # Sort items to ensure consistent hashing
-        # Use JSON for consistent serialization of complex values
-        try:
-            context_str = json.dumps(context, sort_keys=True, default=str)
-        except (TypeError, ValueError):
-            # Fallback: convert to string representation
-            items = sorted(context.items())
-            context_str = str(items)
-
-        return _compute_context_hash(context_str)
-
     def _get_file_mtime(self, template_path: str) -> float:
         """
         Get file modification time (uses cached function)
@@ -88,11 +53,6 @@ class MemoryCache(BaseCacheInterface):
         Cached to reduce filesystem I/O when checking the same file repeatedly.
         """
         return _get_file_mtime_cached(template_path)
-
-    def _make_cache_key(self, template_path: str, context: Dict[str, Any]) -> str:
-        """Create unique cache key"""
-        context_hash = self._get_context_hash(context)
-        return f"{template_path}{CACHE_KEY_SEPARATOR}{context_hash}"
 
     def _is_expired(self, entry: CacheEntry) -> bool:
         """Check if cache entry is expired"""
@@ -109,29 +69,25 @@ class MemoryCache(BaseCacheInterface):
         lru_key = min(self.cache.keys(), key=lambda k: self.cache[k].access_time)
         del self.cache[lru_key]
 
-    def get(self, template_path: str, context: Dict[str, Any] = None) -> Optional[str]:
+    def get(self, template_path: str) -> Optional[str]:
         """
-        Get cached template if valid
+        Get cached raw template if valid
 
         Args:
             template_path: Full path to template file
-            context: Template context (for cache key)
 
         Returns:
-            Cached content or None
+            Cached raw template content or None
         """
-        context = context or {}
-        cache_key = self._make_cache_key(template_path, context)
-
-        if cache_key not in self.cache:
+        if template_path not in self.cache:
             self.misses += 1
             return None
 
-        entry = self.cache[cache_key]
+        entry = self.cache[template_path]
 
         # Check expiration
         if self._is_expired(entry):
-            del self.cache[cache_key]
+            del self.cache[template_path]
             self.misses += 1
             return None
 
@@ -139,7 +95,7 @@ class MemoryCache(BaseCacheInterface):
         if self.track_mtime:
             current_mtime = self._get_file_mtime(template_path)
             if current_mtime != entry.mtime:
-                del self.cache[cache_key]
+                del self.cache[template_path]
                 self.misses += 1
                 return None
 
@@ -150,18 +106,14 @@ class MemoryCache(BaseCacheInterface):
 
         return entry.content
 
-    def store(self, template_path: str, context: Dict[str, Any], content: str):
+    def store(self, template_path: str, content: str):
         """
-        Store rendered template in cache
+        Store raw template in cache
 
         Args:
             template_path: Full path to template file
-            context: Template context
-            content: Rendered content
+            content: Raw template content
         """
-        context = context or {}
-        cache_key = self._make_cache_key(template_path, context)
-
         # Evict if at capacity
         if len(self.cache) >= self.max_size:
             self._evict_lru()
@@ -170,8 +122,7 @@ class MemoryCache(BaseCacheInterface):
         mtime = self._get_file_mtime(template_path) if self.track_mtime else 0
 
         # Store entry
-        context_hash = self._get_context_hash(context)
-        self.cache[cache_key] = CacheEntry(content, mtime, context_hash)
+        self.cache[template_path] = CacheEntry(content, mtime)
 
     def invalidate(self, template_path: str = None):
         """
@@ -202,6 +153,6 @@ class MemoryCache(BaseCacheInterface):
             "total_requests": total_requests,
         }
 
-    def is_cached(self, template_path: str, context: Dict[str, Any] = None) -> bool:
+    def is_cached(self, template_path: str) -> bool:
         """Check if template is cached and valid"""
-        return self.get(template_path, context) is not None
+        return self.get(template_path) is not None
