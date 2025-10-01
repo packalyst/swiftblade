@@ -141,3 +141,7 @@ Thumbs.db
 # Test files
 test_*.py
 *_test.py
+
+# Documentation (local only)
+UPLOAD_INSTRUCTIONS.md
+AUDIT_REPORT.md
