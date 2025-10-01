@@ -12,6 +12,7 @@ from .variables import VariableHandler
 from .component import ComponentHandler
 from .x_component import XComponentHandler
 from .stacks import StackHandler, PrependHandler
+from .custom_directive import CustomDirectiveHandler
 
 __all__ = [
     'BaseHandler',
@@ -24,4 +25,5 @@ __all__ = [
     'XComponentHandler',
     'StackHandler',
     'PrependHandler',
+    'CustomDirectiveHandler',
 ]

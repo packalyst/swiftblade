@@ -188,11 +188,21 @@ from blade import BladeEngine
 
 engine = BladeEngine()
 
-# Register custom directive
-@engine.directive('datetime')
-def datetime_directive(timestamp):
+# Define custom directive handler
+def datetime_directive(args, context):
+    """Custom @datetime directive"""
+    if not args:
+        return ''
+
     from datetime import datetime
-    return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    timestamp = args[0] if len(args) > 0 else None
+    if timestamp is None:
+        return ''
+
+    return datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d %H:%M:%S')
+
+# Register custom directive
+engine.register_directive('datetime', datetime_directive)
 ```
 
 **Usage**:

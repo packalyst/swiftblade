@@ -16,7 +16,8 @@ from .handlers import (
     ComponentHandler,
     XComponentHandler,
     StackHandler,
-    PrependHandler
+    PrependHandler,
+    CustomDirectiveHandler
 )
 
 
@@ -33,6 +34,7 @@ class TemplateParser:
         self.x_component_handler = XComponentHandler(engine)
         self.stack_handler = StackHandler()
         self.prepend_handler = PrependHandler(self.stack_handler)
+        self.custom_directive_handler = CustomDirectiveHandler(engine)
 
         # Recursion depth tracking (DoS prevention)
         self._recursion_depth = 0
@@ -63,6 +65,9 @@ class TemplateParser:
 
         # Process @include
         template = self.include_handler.process(template, context, self)
+
+        # Process custom directives (registered via engine.register_directive)
+        template = self.custom_directive_handler.process(template, context)
 
         # Process control structures
         template = self.control_handler.process(template, context)
