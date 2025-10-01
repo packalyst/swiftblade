@@ -41,10 +41,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/swiftblade"
-Documentation = "https://github.com/yourusername/swiftblade/blob/main/AUDIT_REPORT.md"
-Repository = "https://github.com/yourusername/swiftblade"
-"Bug Tracker" = "https://github.com/yourusername/swiftblade/issues"
+Homepage = "https://github.com/Sapistudio/swiftblade.git"
+Documentation = "https://github.com/Sapistudio/swiftblade/blob/main/AUDIT_REPORT.md"
+Repository = "https://github.com/Sapistudio/swiftblade"
+"Bug Tracker" = "https://github.com/Sapistudio/swiftblade/issues"
 
 [tool.setuptools]
 packages = ["blade", "blade.cache", "blade.handlers", "blade.handlers.control", "blade.utils"]

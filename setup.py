@@ -17,7 +17,7 @@ setup(
     description="High-performance Laravel Blade-inspired template engine for Python",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/swiftblade",
+    url="https://github.com/Sapistudio/swiftblade",
     packages=find_packages(exclude=["tests", "tests.*"]),
     classifiers=[
         "Development Status :: 5 - Production/Stable",
@@ -50,9 +50,9 @@ setup(
         ],
     },
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/swiftblade/issues",
-        "Source": "https://github.com/yourusername/swiftblade",
-        "Documentation": "https://github.com/yourusername/swiftblade/blob/main/AUDIT_REPORT.md",
+        "Bug Reports": "https://github.com/Sapistudio/swiftblade/issues",
+        "Source": "https://github.com/Sapistudio/swiftblade",
+        "Documentation": "https://github.com/Sapistudio/swiftblade/blob/main/AUDIT_REPORT.md",
     },
     include_package_data=True,
     zip_safe=False,
