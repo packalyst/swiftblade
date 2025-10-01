@@ -7,23 +7,8 @@ Fast but doesn't persist across restarts
 import os
 import time
 from typing import Optional, Dict, Any
-from functools import lru_cache
 
 from .base import BaseCacheInterface, CacheEntry
-
-
-@lru_cache(maxsize=500)
-def _get_file_mtime_cached(template_path: str) -> float:
-    """
-    Get file modification time (cached)
-
-    Caches mtime checks to reduce filesystem calls.
-    Cache is smaller since file mtimes change less frequently.
-    """
-    try:
-        return os.path.getmtime(template_path)
-    except OSError:
-        return 0.0
 
 
 class MemoryCache(BaseCacheInterface):
@@ -47,12 +32,11 @@ class MemoryCache(BaseCacheInterface):
         self.misses = 0
 
     def _get_file_mtime(self, template_path: str) -> float:
-        """
-        Get file modification time (uses cached function)
-
-        Cached to reduce filesystem I/O when checking the same file repeatedly.
-        """
-        return _get_file_mtime_cached(template_path)
+        """Get file modification time"""
+        try:
+            return os.path.getmtime(template_path)
+        except OSError:
+            return 0.0
 
     def _is_expired(self, entry: CacheEntry) -> bool:
         """Check if cache entry is expired"""

@@ -10,22 +10,8 @@ import hashlib
 import json
 from typing import Optional, Dict, Any
 from pathlib import Path
-from functools import lru_cache
 
 from .base import BaseCacheInterface
-
-
-@lru_cache(maxsize=500)
-def _get_file_mtime_cached_disk(template_path: str) -> float:
-    """
-    Get file modification time (cached)
-
-    Caches mtime checks to reduce filesystem calls.
-    """
-    try:
-        return os.path.getmtime(template_path)
-    except OSError:
-        return 0.0
 
 
 class DiskCache(BaseCacheInterface):
@@ -72,12 +58,11 @@ class DiskCache(BaseCacheInterface):
             pass
 
     def _get_file_mtime(self, template_path: str) -> float:
-        """
-        Get file modification time (uses cached function)
-
-        Cached to reduce filesystem I/O when checking the same file repeatedly.
-        """
-        return _get_file_mtime_cached_disk(template_path)
+        """Get file modification time"""
+        try:
+            return os.path.getmtime(template_path)
+        except OSError:
+            return 0.0
 
     def _make_cache_key(self, template_path: str) -> str:
         """Create unique cache key from template path"""
