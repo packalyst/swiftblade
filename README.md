@@ -24,8 +24,18 @@ Zero dependencies. Production-ready. Blazingly fast.
 
 ### Installation
 
+**Install directly from GitHub:**
+
 ```bash
-pip install swiftblade
+pip install git+https://github.com/Sapistudio/swiftblade.git
+```
+
+**Or clone and install locally:**
+
+```bash
+git clone https://github.com/Sapistudio/swiftblade.git
+cd swiftblade
+pip install -e .
 ```
 
 ### Basic Usage
