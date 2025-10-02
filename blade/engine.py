@@ -319,6 +319,44 @@ class BladeEngine:
         """Get all global variables"""
         return getattr(self, '_globals', {})
 
+    def add_globals(self, globals_dict: Dict[str, Any] = None, **kwargs):
+        """
+        Add multiple global variables/functions to all templates at once
+
+        Args:
+            globals_dict: Dictionary of name->value pairs
+            **kwargs: Keyword arguments as name=value pairs
+
+        Example:
+            # Using dict
+            engine.add_globals({
+                'app_name': 'My App',
+                'version': '1.0.0',
+                'DownloadStatus': DownloadStatus
+            })
+
+            # Using kwargs
+            engine.add_globals(
+                app_name='My App',
+                version='1.0.0',
+                DownloadStatus=DownloadStatus
+            )
+
+            # Combine both
+            engine.add_globals(
+                {'app_name': 'My App'},
+                version='1.0.0'
+            )
+        """
+        # Add from dict
+        if globals_dict:
+            for name, value in globals_dict.items():
+                self.add_global(name, value)
+
+        # Add from kwargs
+        for name, value in kwargs.items():
+            self.add_global(name, value)
+
     def clear_cache(self):
         """Clear all cached templates"""
         if self.cache:
