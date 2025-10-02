@@ -17,6 +17,7 @@ Zero dependencies. Production-ready. Blazingly fast.
 📦 **Zero Dependencies** - No external packages required
 🎯 **Type Safe** - Full type hints throughout
 🔧 **Highly Configurable** - Customize every aspect
+🧩 **Modern Components** - X-components with props, slots, and attribute pass-through
 
 ---
 
@@ -65,102 +66,471 @@ Hello, {{ name }}!
 ```blade
 {{-- Escaped output (safe) --}}
 {{ user.name }}
+{{ $user.name }}  {{-- $ prefix supported (Laravel style) --}}
 
 {{-- Raw output (unescaped) --}}
 {!! html_content !!}
+{!! $html_content !!}
+
+{{-- With default values --}}
+{{ title or 'Default Title' }}
+```
+
+**Note:** The `$` prefix is optional and automatically stripped. Both `{{ name }}` and `{{ $name }}` work identically.
+
+### Comments
+
+```blade
+{{-- This is a comment --}}
+
+{{--
+    Multi-line comment
+    Won't appear in rendered output
+--}}
 ```
 
 ### Conditionals
 
 ```blade
-@if user
+{{-- Basic if/else --}}
+@if(user)
     Hello, {{ user.name }}!
-@elseif guest
+@elseif(guest)
     Hello, Guest!
 @else
     Please log in
+@endif
+
+{{-- Unless (negated if) --}}
+@unless(user.banned)
+    Welcome back!
+@endunless
+
+{{-- Check if variable is set --}}
+@isset('variable_name')
+    Variable is defined
+@endisset
+
+{{-- Check if variable is empty --}}
+@empty('items')
+    No items found
+@endempty
+```
+
+**Undefined Variable Handling:**
+If a variable doesn't exist in `@if()` conditions, it's treated as falsy (returns false) instead of throwing an error.
+
+```blade
+@if(optional_slot)
+    {{-- Only renders if optional_slot exists and is truthy --}}
+    {{ $optional_slot }}
+@else
+    {{-- Renders if optional_slot doesn't exist or is falsy --}}
+    Default content
 @endif
 ```
 
 ### Loops
 
 ```blade
-@foreach item in items
+{{-- Foreach loop --}}
+@foreach(item in items)
     - {{ item }}
 @endforeach
 
-@for i in range(5)
+{{-- Alternative syntax with parentheses --}}
+@foreach(user in users)
+    Name: {{ user.name }}
+@endforeach
+
+{{-- For loop --}}
+@for(i in range(5))
     Number: {{ i }}
 @endfor
+
+{{-- While loop --}}
+@while(count < 10)
+    Count: {{ count }}
+@endwhile
+```
+
+### Switch Statements
+
+```blade
+@switch(status)
+    @case('pending')
+        Order is pending
+    @case('processing')
+        Order is being processed
+    @case('completed')
+        Order completed!
+    @default
+        Unknown status
+@endswitch
 ```
 
 ### Template Inheritance
 
-**Layout** (`views/layout.html`):
+**Layout** (`views/layouts/main.html`):
 ```blade
 <!DOCTYPE html>
 <html>
 <head>
     <title>@yield('title', 'Default Title')</title>
+    @stack('styles')
 </head>
 <body>
-    @yield('content')
+    <header>
+        @yield('header')
+    </header>
+
+    <main>
+        @yield('content')
+    </main>
+
+    <footer>
+        @yield('footer', 'Default Footer')
+    </footer>
+
+    @stack('scripts')
 </body>
 </html>
 ```
 
-**Page** (`views/page.html`):
+**Page** (`views/pages/home.html`):
 ```blade
-@extends('layout.html')
+@extends('layouts/main')
 
-@section('title', 'My Page')
+@section('title', 'Home Page')
+
+@section('header')
+    <h1>Welcome to Our Site</h1>
+@endsection
 
 @section('content')
-    <h1>Welcome!</h1>
+    <p>This is the main content.</p>
 @endsection
-```
 
-### Components
-
-**Modern X-Component** (`views/components/button.html`):
-```blade
-@props(['variant' => 'primary', 'disabled' => false])
-
-<button class="btn-{{ variant }}" {{ disabled ? 'disabled' : '' }}>
-    {{ slot }}
-</button>
-```
-
-**Usage**:
-```blade
-<x-button variant="success">
-    Save Changes
-</x-button>
+@push('scripts')
+    <script src="home.js"></script>
+@endpush
 ```
 
 ### Includes
 
 ```blade
-@include('partials.header')
+{{-- Simple include --}}
+@include('components/header')
 
-@includeIf('partials.sidebar', show_sidebar)
+{{-- Include with data --}}
+@include('components/alert', {'type': 'success', 'message': 'Saved!'})
+
+{{-- Conditional include --}}
+@includeIf('components/sidebar', show_sidebar)
 ```
 
-### Stacks
+### Stacks (for assets)
 
 ```blade
-{{-- Push to stack --}}
+{{-- In layout --}}
+@stack('scripts')
+
+{{-- In templates --}}
 @push('scripts')
     <script src="app.js"></script>
 @endpush
 
-{{-- Output stack --}}
-@stack('scripts')
+@prepend('scripts')
+    <script src="jquery.js"></script>  {{-- Added to beginning --}}
+@endprepend
 ```
 
 ---
 
+## Components
+
+### X-Components (Modern Syntax)
+
+**Component** (`views/components/button.html`):
+```blade
+@props(['variant' => 'primary', 'size' => 'md', 'disabled' => false])
+
+<button
+    class="btn btn-{{ $variant }} btn-{{ $size }}"
+    {{ $disabled ? 'disabled' : '' }}
+    {{ $attributes }}
+>
+    {{ $slot }}
+</button>
+```
+
+**Usage:**
+```blade
+{{-- Basic usage --}}
+<x-button variant="success">
+    Save Changes
+</x-button>
+
+{{-- With custom attributes (passed through) --}}
+<x-button
+    variant="danger"
+    size="lg"
+    onclick="confirmDelete()"
+    data-id="123"
+>
+    Delete
+</x-button>
+
+{{-- Self-closing --}}
+<x-button variant="primary" disabled />
+```
+
+### Named Slots
+
+**Component** (`views/components/modal.html`):
+```blade
+@props(['id' => '', 'title' => ''])
+
+<div class="modal" id="{{ $id }}">
+    <div class="modal-header">
+        <h3>{{ $title }}</h3>
+    </div>
+
+    @if(body)
+        <div class="modal-body">
+            {!! $body !!}
+        </div>
+    @else
+        {!! $slot !!}
+    @endif
+
+    @if(footer)
+        <div class="modal-footer">
+            {!! $footer !!}
+        </div>
+    @endif
+</div>
+```
+
+**Usage:**
+```blade
+{{-- With named slots --}}
+<x-modal id="confirm-modal" title="Confirm Action">
+    <x-slot:body>
+        <p>Are you sure you want to proceed?</p>
+    </x-slot:body>
+
+    <x-slot:footer>
+        <button class="btn btn-secondary">Cancel</button>
+        <button class="btn btn-primary">Confirm</button>
+    </x-slot:footer>
+</x-modal>
+
+{{-- With default slot --}}
+<x-modal id="simple-modal" title="Notice">
+    <p>This goes in the default slot</p>
+</x-modal>
+
+{{-- Any slot name works! --}}
+<x-card>
+    <x-slot:header>
+        Card Header
+    </x-slot:header>
+
+    <x-slot:custom_section>
+        Custom content here
+    </x-slot:custom_section>
+</x-card>
+```
+
+**Slot Syntax Options:**
+```blade
+{{-- Colon syntax (recommended) --}}
+<x-slot:name>Content</x-slot:name>
+
+{{-- Name attribute syntax --}}
+<x-slot name="name">Content</x-slot>
+```
+
+### Props with Defaults
+
+```blade
+@props([
+    'variant' => 'primary',
+    'size' => 'md',
+    'disabled' => false,
+    'icon' => ''
+])
+
+<button class="btn-{{ $variant }} btn-{{ $size }}" {{ $attributes }}>
+    @if(icon)
+        <i class="icon-{{ $icon }}"></i>
+    @endif
+    {{ $slot }}
+</button>
+```
+
+### Attribute Pass-Through
+
+Attributes not defined in `@props()` are automatically available via `{{ $attributes }}`:
+
+```blade
+{{-- Component definition --}}
+@props(['variant' => 'primary'])
+
+<button class="btn-{{ $variant }}" {{ $attributes }}>
+    {{ $slot }}
+</button>
+
+{{-- Usage --}}
+<x-button
+    variant="success"
+    onclick="save()"
+    data-id="42"
+    aria-label="Save button"
+>
+    Save
+</x-button>
+
+{{-- Renders as: --}}
+<button
+    class="btn-success"
+    onclick="save()"
+    data-id="42"
+    aria-label="Save button"
+>
+    Save
+</button>
+```
+
+**Individual attribute access:**
+```blade
+@props(['variant' => 'primary'])
+
+{{-- Access individual pass-through attributes --}}
+@if(data_action)
+    <button data-action="{{ $data_action }}" class="btn-{{ $variant }}">
+        {{ $slot }}
+    </button>
+@endif
+
+{{-- Note: hyphens in attributes are converted to underscores --}}
+{{-- data-action becomes data_action --}}
+```
+
+### Nested Components
+
+```blade
+{{-- components/card.html --}}
+@props(['title' => ''])
+
+<div class="card">
+    @if(title)
+        <div class="card-header">{{ $title }}</div>
+    @endif
+    <div class="card-body">
+        {{ $slot }}
+    </div>
+</div>
+
+{{-- components/alert.html --}}
+@props(['type' => 'info'])
+
+<div class="alert alert-{{ $type }}">
+    {{ $slot }}
+</div>
+
+{{-- Usage --}}
+<x-card title="Notifications">
+    <x-alert type="success">
+        Your changes have been saved!
+    </x-alert>
+
+    <x-alert type="warning">
+        Please review the updated terms.
+    </x-alert>
+</x-card>
+```
+
+### Legacy Components (Deprecated)
+
+```blade
+{{-- Legacy @component syntax (still supported) --}}
+@component('components.alert', {'type': 'success'})
+    @slot('title')
+        Success!
+    @endslot
+
+    Your changes have been saved.
+@endcomponent
+```
+
+**Note:** Use X-components (`<x-name>`) instead for modern projects.
+
+---
+
 ## Advanced Features
+
+### Custom Directives
+
+```python
+from blade import BladeEngine
+
+engine = BladeEngine()
+
+# Simple directive
+def icon_directive(args, context):
+    """Usage: @icon('home', 'tabler', 24, 24)"""
+    name = args[0] if args else 'default'
+    library = args[1] if len(args) > 1 else 'tabler'
+    width = args[2] if len(args) > 2 else 20
+    height = args[3] if len(args) > 3 else 20
+
+    return f'<svg class="icon-{name}" width="{width}" height="{height}">...</svg>'
+
+engine.register_directive('icon', icon_directive)
+
+# DateTime directive
+def datetime_directive(args, context):
+    """Usage: @datetime(timestamp, 'Y-m-d H:i:s')"""
+    from datetime import datetime
+    timestamp = args[0] if args else None
+    format_str = args[1] if len(args) > 1 else '%Y-%m-%d %H:%M:%S'
+
+    if timestamp is None:
+        return ''
+
+    return datetime.fromtimestamp(int(timestamp)).strftime(format_str)
+
+engine.register_directive('datetime', datetime_directive)
+```
+
+**Usage in templates:**
+```blade
+@icon('home', 'tabler', 24, 24)
+@datetime(1234567890, '%Y-%m-%d')
+```
+
+### Global Functions & Helpers
+
+```python
+from blade import BladeEngine
+
+engine = BladeEngine()
+
+# Add global functions
+def format_currency(amount):
+    return f"${amount:,.2f}"
+
+engine.add_global('format_currency', format_currency)
+engine.add_global('app_name', 'My Application')
+```
+
+**Usage:**
+```blade
+{{ format_currency(1234.56) }}  {{-- $1,234.56 --}}
+{{ app_name }}  {{-- My Application --}}
+```
 
 ### Caching
 
@@ -170,44 +540,20 @@ engine = BladeEngine(
     cache_enabled=True,
     cache_storage_type='memory',
     cache_max_size=1000,
-    cache_ttl=3600
+    cache_ttl=3600,
+    track_mtime=True  # Auto-reload on file changes
 )
 
 # Disk cache (persistent)
 engine = BladeEngine(
     cache_enabled=True,
     cache_storage_type='disk',
-    cache_dir='.cache/blade'
+    cache_dir='.cache/blade',
+    track_mtime=True
 )
-```
 
-### Custom Directives
-
-```python
-from blade import BladeEngine
-
-engine = BladeEngine()
-
-# Define custom directive handler
-def datetime_directive(args, context):
-    """Custom @datetime directive"""
-    if not args:
-        return ''
-
-    from datetime import datetime
-    timestamp = args[0] if len(args) > 0 else None
-    if timestamp is None:
-        return ''
-
-    return datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d %H:%M:%S')
-
-# Register custom directive
-engine.register_directive('datetime', datetime_directive)
-```
-
-**Usage**:
-```blade
-Created: @datetime(1234567890)
+# Clear cache programmatically
+engine.clear_cache()
 ```
 
 ### Security Configuration
@@ -217,108 +563,87 @@ engine = BladeEngine(
     max_loop_iterations=10000,     # Prevent infinite loops
     max_recursion_depth=50,        # Prevent deep recursion
     max_template_size=10_000_000,  # 10 MB limit
-    allow_python_blocks=False      # Disable @python blocks (recommended)
+    allow_python_blocks=False,     # Disable @python blocks (recommended)
+    strict_mode=False              # Don't raise on missing variables
 )
 ```
 
----
-
-## Performance
-
-Benchmarks on standard hardware (single-threaded):
-
-| Operation | Time | Throughput |
-|-----------|------|------------|
-| Simple template | 0.070 ms | ~14,000 req/s |
-| Variable interpolation | 0.225 ms | ~4,400 req/s |
-| Loop (10 items) | 0.897 ms | ~1,100 req/s |
-| Cached render | 0.202 ms | **3.3x faster** |
-
-**Key Optimizations:**
-- ✅ LRU cache for hash computation (~300x faster)
-- ✅ Centralized regex patterns (zero runtime overhead)
-- ✅ Template caching (3.3x speedup)
-- ✅ Optimized component resolution
-
----
-
-## Architecture
-
-```
-blade-python/
-├── blade/
-│   ├── engine.py          # Main API
-│   ├── parser.py          # Template parser
-│   ├── compiler.py        # Template compiler
-│   ├── evaluator.py       # Safe expression evaluation
-│   ├── constants.py       # Configuration
-│   ├── cache/             # Caching system
-│   │   ├── memory.py      # In-memory cache
-│   │   └── disk.py        # Disk cache
-│   ├── handlers/          # Directive handlers
-│   │   ├── variables.py   # {{ }} and {!! !!}
-│   │   ├── extends.py     # @extends/@section/@yield
-│   │   ├── include.py     # @include
-│   │   ├── component.py   # @component
-│   │   ├── x_component.py # <x-component>
-│   │   └── control/       # Control structures
-│   └── utils/             # Utilities
-└── README.md
-```
-
-**29 modules, 3,525 lines of code**
-
----
-
-## Configuration Options
+### SafeString (Prevent Double-Escaping)
 
 ```python
-BladeEngine(
-    template_dir='views',              # Template directory
-    cache_enabled=True,                # Enable caching
-    cache_storage_type='memory',       # 'memory' or 'disk'
-    cache_dir='.cache/blade',          # Disk cache directory
-    cache_max_size=1000,               # Max cached templates
-    cache_ttl=3600,                    # Cache TTL (seconds)
-    track_mtime=True,                  # Track file changes
-    strict_mode=False,                 # Strict variable checking
-    file_extension='.html',            # Default extension
-    encoding='utf-8',                  # File encoding
-    allow_python_blocks=False,         # Allow @python blocks
-    max_loop_iterations=10000,         # Loop limit
-    max_recursion_depth=50,            # Recursion limit
-    max_template_size=10_000_000       # Template size limit
-)
+from blade.utils.safe_string import SafeString
+
+# Mark strings as already-safe HTML
+html_content = SafeString('<div>Safe HTML</div>')
+
+# In templates
+context = {'safe_html': SafeString('<b>Bold</b>')}
+html = engine.render('page.html', context)
+```
+
+**In templates:**
+```blade
+{{ safe_html }}  {{-- Won't be escaped --}}
+{!! safe_html !!}  {{-- Also won't be escaped --}}
 ```
 
 ---
 
-## Security
+## Complete Directive Reference
 
-### XSS Protection
+### Control Structures
 
-- `{{ variable }}` - **Auto-escaped** (safe by default)
-- `{!! variable !!}` - Raw output (use with caution)
-- `SafeString` - Mark pre-escaped HTML
+| Directive | Description | Example |
+|-----------|-------------|---------|
+| `@if(condition)` | Conditional rendering | `@if(user.active)...@endif` |
+| `@elseif(condition)` | Else-if branch | `@if(x)...@elseif(y)...@endif` |
+| `@else` | Else branch | `@if(x)...@else...@endif` |
+| `@unless(condition)` | Negated if | `@unless(user.banned)...@endunless` |
+| `@isset('var')` | Check if set | `@isset('user')...@endisset` |
+| `@empty('var')` | Check if empty | `@empty('items')...@endempty` |
 
-### DoS Prevention
+### Loops
 
-- Configurable loop iteration limits
-- Configurable recursion depth limits
-- Template size limits
-- Cache size limits
+| Directive | Description | Example |
+|-----------|-------------|---------|
+| `@foreach(item in list)` | Iterate over list | `@foreach(user in users)...@endforeach` |
+| `@for(i in range())` | For loop | `@for(i in range(5))...@endfor` |
+| `@while(condition)` | While loop | `@while(count < 10)...@endwhile` |
 
-### Path Traversal Protection
+### Template Organization
 
-- Component name validation (whitelist)
-- Path traversal checks
-- Absolute path prevention
+| Directive | Description | Example |
+|-----------|-------------|---------|
+| `@extends('layout')` | Extend layout | `@extends('layouts/main')` |
+| `@section('name')` | Define section | `@section('content')...@endsection` |
+| `@yield('name')` | Output section | `@yield('content', 'default')` |
+| `@include('partial')` | Include template | `@include('components/header')` |
+| `@includeIf('partial', condition)` | Conditional include | `@includeIf('sidebar', show_it)` |
 
-### Safe Expression Evaluation
+### Stacks
 
-- AST-based evaluation (no `eval()`)
-- Whitelist of allowed operations
-- Sandboxed execution
+| Directive | Description | Example |
+|-----------|-------------|---------|
+| `@push('stack')` | Push to stack | `@push('scripts')...@endpush` |
+| `@prepend('stack')` | Prepend to stack | `@prepend('scripts')...@endprepend` |
+| `@stack('name')` | Output stack | `@stack('scripts')` |
+
+### Components
+
+| Directive | Description | Example |
+|-----------|-------------|---------|
+| `@props([...])` | Define component props | `@props(['variant' => 'primary'])` |
+| `@component('name')` | Legacy component | `@component('alert')...@endcomponent` |
+| `<x-name>` | Modern component | `<x-button>Click</x-button>` |
+| `<x-slot:name>` | Named slot | `<x-slot:footer>...</x-slot:footer>` |
+
+### Variables
+
+| Syntax | Description | Example |
+|--------|-------------|---------|
+| `{{ var }}` | Escaped output | `{{ user.name }}` |
+| `{!! var !!}` | Raw output | `{!! html_content !!}` |
+| `{{-- comment --}}` | Comment | `{{-- TODO: fix this --}}` |
 
 ---
 
@@ -335,7 +660,34 @@ blade = BladeEngine(template_dir='templates')
 
 @app.route('/')
 def index():
-    return blade.render('index.html', {'title': 'Home'})
+    return blade.render('index.html', {
+        'title': 'Home',
+        'user': {'name': 'John'}
+    })
+
+if __name__ == '__main__':
+    app.run()
+```
+
+### Sanic
+
+```python
+from sanic import Sanic, response
+from blade import BladeEngine
+
+app = Sanic(__name__)
+blade = BladeEngine(template_dir='views')
+
+@app.route('/')
+async def index(request):
+    html = blade.render('index.html', {
+        'title': 'Home',
+        'user': request.ctx.user
+    })
+    return response.html(html)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8000)
 ```
 
 ### FastAPI
@@ -350,50 +702,283 @@ blade = BladeEngine(template_dir='templates')
 
 @app.get('/', response_class=HTMLResponse)
 async def index():
-    return blade.render('index.html', {'title': 'Home'})
+    return blade.render('index.html', {
+        'title': 'Home',
+        'items': [1, 2, 3]
+    })
 ```
 
 ### Django
 
 ```python
 # settings.py
-BLADE_ENGINE = BladeEngine(template_dir='templates')
+from blade import BladeEngine
+
+BLADE_ENGINE = BladeEngine(
+    template_dir=BASE_DIR / 'templates',
+    cache_enabled=True
+)
 
 # views.py
 from django.http import HttpResponse
 from django.conf import settings
 
 def index(request):
-    html = settings.BLADE_ENGINE.render('index.html', {'title': 'Home'})
+    html = settings.BLADE_ENGINE.render('index.html', {
+        'title': 'Home',
+        'user': request.user
+    })
     return HttpResponse(html)
 ```
 
 ---
 
-## Development
+## Performance
 
-### Running Tests
+Benchmarks on standard hardware (single-threaded):
 
-```bash
-python test_blade_refactor.py
-```
+| Operation | Time | Throughput |
+|-----------|------|------------|
+| Simple template | 0.070 ms | ~14,000 req/s |
+| Variable interpolation | 0.225 ms | ~4,400 req/s |
+| Loop (10 items) | 0.897 ms | ~1,100 req/s |
+| Cached render | 0.202 ms | **3.3x faster** |
+| Component render | 1.2 ms | ~830 req/s |
 
-### Performance Testing
-
-See `AUDIT_REPORT.md` for comprehensive benchmarks.
+**Key Optimizations:**
+- ✅ LRU cache for hash computation (~300x faster)
+- ✅ Centralized regex patterns (zero runtime overhead)
+- ✅ Template caching (3.3x speedup)
+- ✅ Optimized component resolution
+- ✅ SafeString prevents double-escaping
 
 ---
 
-## Comparison with Other Engines
+## Security
 
-| Feature | Blade Python | Jinja2 | Mako | Cheetah |
-|---------|-------------|---------|------|---------|
-| Zero dependencies | ✅ | ❌ | ❌ | ❌ |
-| Laravel Blade syntax | ✅ | ❌ | ❌ | ❌ |
-| Type hints | ✅ | Partial | ❌ | ❌ |
-| LRU caching | ✅ | ❌ | ❌ | ❌ |
-| Component system | ✅ | ❌ | ❌ | ❌ |
-| Sub-millisecond rendering | ✅ | ✅ | ✅ | ✅ |
+### XSS Protection
+
+- `{{ variable }}` - **Auto-escaped** (safe by default)
+- `{!! variable !!}` - Raw output (use with trusted content only)
+- `SafeString` - Mark pre-escaped HTML as safe
+
+```python
+from blade.utils.safe_string import SafeString
+
+# This won't be escaped
+safe_html = SafeString('<b>Bold text</b>')
+```
+
+### DoS Prevention
+
+- Configurable loop iteration limits (`max_loop_iterations`)
+- Configurable recursion depth limits (`max_recursion_depth`)
+- Template size limits (`max_template_size`)
+- Cache size limits (`cache_max_size`)
+
+### Path Traversal Protection
+
+- Component name validation (alphanumeric, hyphens, dots only)
+- Path traversal checks (no `../` or absolute paths)
+- Whitelisted file extensions
+
+### Safe Expression Evaluation
+
+- AST-based evaluation (no `eval()` or `exec()`)
+- Whitelist of allowed operations and built-ins
+- Sandboxed execution environment
+- No access to dunder methods (`__import__`, `__class__`, etc.)
+
+---
+
+## Configuration Reference
+
+```python
+BladeEngine(
+    # Template Settings
+    template_dir='views',              # Template directory
+    file_extension='.html',            # Default file extension
+    encoding='utf-8',                  # File encoding
+
+    # Caching
+    cache_enabled=True,                # Enable caching
+    cache_storage_type='memory',       # 'memory' or 'disk'
+    cache_dir='.cache/blade',          # Disk cache directory
+    cache_max_size=1000,               # Max cached templates
+    cache_ttl=3600,                    # Cache TTL in seconds (0 = infinite)
+    track_mtime=True,                  # Auto-reload on file changes
+
+    # Security
+    strict_mode=False,                 # Raise on undefined variables
+    allow_python_blocks=False,         # Allow @python blocks (dangerous!)
+    max_loop_iterations=10000,         # Maximum loop iterations
+    max_recursion_depth=50,            # Maximum recursion depth
+    max_template_size=10_000_000       # Max template size (bytes)
+)
+```
+
+---
+
+## Best Practices
+
+### 1. Always Escape User Input
+
+```blade
+{{-- Good: Auto-escaped --}}
+{{ user_input }}
+
+{{-- Bad: Raw output of user data --}}
+{!! user_input !!}  {{-- XSS vulnerability! --}}
+```
+
+### 2. Use Components for Reusability
+
+```blade
+{{-- Instead of repeating HTML --}}
+<x-button variant="primary">Save</x-button>
+<x-button variant="danger">Delete</x-button>
+
+{{-- Not this --}}
+<button class="btn btn-primary">Save</button>
+<button class="btn btn-danger">Delete</button>
+```
+
+### 3. Leverage Template Inheritance
+
+```blade
+{{-- layouts/app.html --}}
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>@yield('title', 'My App')</title>
+    </head>
+    <body>
+        @yield('content')
+    </body>
+</html>
+
+{{-- pages/home.html --}}
+@extends('layouts/app')
+
+@section('title', 'Home')
+
+@section('content')
+    <h1>Welcome!</h1>
+@endsection
+```
+
+### 4. Use Stacks for Asset Management
+
+```blade
+{{-- In layout --}}
+<head>
+    @stack('styles')
+</head>
+<body>
+    @yield('content')
+    @stack('scripts')
+</body>
+
+{{-- In page --}}
+@push('styles')
+    <link rel="stylesheet" href="page-specific.css">
+@endpush
+
+@push('scripts')
+    <script src="page-specific.js"></script>
+@endpush
+```
+
+### 5. Enable Caching in Production
+
+```python
+# Development
+engine = BladeEngine(
+    cache_enabled=True,
+    track_mtime=True  # Auto-reload on changes
+)
+
+# Production
+engine = BladeEngine(
+    cache_enabled=True,
+    cache_storage_type='disk',  # Persist across restarts
+    track_mtime=False  # Disable for performance
+)
+```
+
+---
+
+## Troubleshooting
+
+### Template Not Found
+
+```python
+# Error: TemplateNotFoundException
+# Solution: Check template_dir and file paths
+engine = BladeEngine(template_dir='views')
+html = engine.render('pages/home.html', {})  # Must exist at views/pages/home.html
+```
+
+### Undefined Variable Errors
+
+```python
+# Error: DirectiveError: name 'user' is not defined
+# Solution: Either pass the variable or use @if checks
+
+# Option 1: Pass all variables
+html = engine.render('page.html', {'user': None})
+
+# Option 2: Check in template
+@if(user)
+    {{ user.name }}
+@endif
+```
+
+### Component Not Rendering
+
+```blade
+{{-- Error: Component 'button' not found --}}
+{{-- Solution: Check component path --}}
+
+{{-- Components must be in components/ subdirectory --}}
+<x-button>  {{-- Looks for: components/button.html --}}
+
+{{-- Nested components use dot notation --}}
+<x-forms.input>  {{-- Looks for: components/forms/input.html --}}
+```
+
+### Slot Content Not Showing
+
+```blade
+{{-- Issue: Slot variable might not exist --}}
+{{-- Solution: Always check if slot exists --}}
+
+@if(custom_slot)
+    {!! $custom_slot !!}
+@else
+    {!! $slot !!}  {{-- Fallback to default slot --}}
+@endif
+```
+
+---
+
+## Changelog
+
+### v1.0.0 (2025)
+
+- ✅ Initial release
+- ✅ Full Laravel Blade syntax support
+- ✅ **$ variable prefix support** (Laravel-style)
+- ✅ **Flexible named slots** (any slot name supported)
+- ✅ **Undefined variable handling** in @if conditions
+- ✅ **Attribute pass-through** with $attributes
+- ✅ LRU cache optimization
+- ✅ X-component system with props and slots
+- ✅ Template inheritance (@extends, @section, @yield)
+- ✅ Control structures (@if, @foreach, @switch)
+- ✅ Security features (XSS, DoS protection)
+- ✅ Zero dependencies
+- ✅ Production-ready performance
 
 ---
 
@@ -416,36 +1001,20 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-## Changelog
-
-### v1.0.0 (2025)
-
-- ✅ Initial release
-- ✅ Full Laravel Blade syntax support
-- ✅ LRU cache optimization
-- ✅ Component system (legacy + X-components)
-- ✅ Template inheritance
-- ✅ Control structures
-- ✅ Security features (XSS, DoS protection)
-- ✅ Zero dependencies
-- ✅ Production-ready performance
-
----
-
 ## Author
 
-Built with ❤️ by the Blade Python team
+Built with ❤️ by the SwiftBlade team
 
 ---
 
 ## Links
 
-- **Documentation**: [Full docs](AUDIT_REPORT.md)
+- **GitHub**: https://github.com/Sapistudio/swiftblade
 - **Issues**: Report bugs and request features
-- **PyPI**: `pip install blade-python`
+- **Documentation**: This README
 
 ---
 
 ## Acknowledgments
 
-Inspired by Laravel's Blade template engine.
+Inspired by Laravel's Blade template engine. Built for Python developers who want elegant, powerful templates without the complexity.
