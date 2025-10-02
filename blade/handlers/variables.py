@@ -33,7 +33,19 @@ class VariableHandler(BaseHandler):
     def _output_variable(self, expr: str, context: Dict[str, Any], escape: bool = True) -> str:
         """Evaluate and output variable"""
         try:
-            value = self.evaluator.safe_eval(expr, context)
+            # Laravel Blade uses $ prefix for variables, but Python doesn't support it
+            # Strip leading $ from simple variable names (e.g., $slot -> slot)
+            # But preserve $ in complex expressions (e.g., keep as-is if it's in a string)
+            expr_clean = expr.strip()
+            if expr_clean.startswith('$'):
+                # Only strip $ from variable names, not from strings
+                # Simple heuristic: if it starts with $ and next char is alphanumeric or underscore
+                if len(expr_clean) > 1 and (expr_clean[1].isalpha() or expr_clean[1] == '_'):
+                    # Replace leading $ only at word boundaries
+                    import re
+                    expr_clean = re.sub(r'\$([a-zA-Z_]\w*)', r'\1', expr_clean)
+
+            value = self.evaluator.safe_eval(expr_clean, context)
             result = str(value) if value is not None else ''
 
             # Check if value is marked as safe (like slot content)
