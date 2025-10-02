@@ -44,9 +44,6 @@ CACHE_KEY_SEPARATOR = ":"
 MAX_COMPONENT_NESTING_ITERATIONS = 20
 """Maximum iterations for processing nested components (prevents infinite loops)"""
 
-MAX_LEGACY_COMPONENT_ITERATIONS = 10
-"""Maximum iterations for processing legacy @component directives"""
-
 # Error Message Truncation
 ERROR_CONTEXT_MAX_LENGTH = 100
 """Maximum length of code/template context in error messages"""
@@ -152,25 +149,7 @@ ENDIF_PATTERN = re.compile(r'@endif')
 ELSEIF_PATTERN = re.compile(r'@elseif\(.*?\)|@else')
 """Pattern for @elseif and @else directives"""
 
-# Legacy Component Patterns
-COMPONENT_PATTERN = re.compile(
-    r"@component\(\s*(['\"])([^'\"]+)\1(?:\s*,\s*(\{.*?\}))?\s*\)((?:(?!@component).)*?)@endcomponent",
-    re.DOTALL
-)
-"""Pattern for @component directive (non-nested)"""
-
-COMPONENT_NESTED_PATTERN = re.compile(
-    r"@component\(\s*(['\"])([^'\"]+)\1(?:\s*,\s*(\{.*?\}))?\s*\)([\s\S]*?)@endcomponent"
-)
-"""Pattern for @component directive (with nesting)"""
-
-SLOT_PATTERN = re.compile(
-    r"@slot\(\s*(['\"])(.*?)\1(?:\s*,\s*([^)]*))?\s*\)([\s\S]*?)@endslot",
-    re.DOTALL
-)
-"""Pattern for @slot directive"""
-
-# Modern X-Component Patterns
+# X-Component Patterns
 X_COMPONENT_SELF_CLOSING_PATTERN = re.compile(
     r'<x-([a-z0-9\-\.]+)((?:\s+[^>]*)?)\s*/>',
     re.IGNORECASE

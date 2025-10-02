@@ -9,7 +9,6 @@ from .extends import ExtendsHandler
 from .include import IncludeHandler
 from .control import ControlStructureHandler
 from .variables import VariableHandler
-from .component import ComponentHandler
 from .x_component import XComponentHandler
 from .stacks import StackHandler, PrependHandler
 from .custom_directive import CustomDirectiveHandler
@@ -21,7 +20,6 @@ __all__ = [
     'IncludeHandler',
     'ControlStructureHandler',
     'VariableHandler',
-    'ComponentHandler',
     'XComponentHandler',
     'StackHandler',
     'PrependHandler',

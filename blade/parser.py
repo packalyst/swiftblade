@@ -13,7 +13,6 @@ from .handlers import (
     IncludeHandler,
     ControlStructureHandler,
     VariableHandler,
-    ComponentHandler,
     XComponentHandler,
     StackHandler,
     PrependHandler,
@@ -30,7 +29,6 @@ class TemplateParser:
         self.include_handler = IncludeHandler(engine)
         self.control_handler = ControlStructureHandler(engine)
         self.variable_handler = VariableHandler(engine)
-        self.component_handler = ComponentHandler(engine)
         self.x_component_handler = XComponentHandler(engine)
         self.stack_handler = StackHandler()
         self.prepend_handler = PrependHandler(self.stack_handler)
@@ -59,9 +57,6 @@ class TemplateParser:
 
         # Process X-components (modern syntax: <x-button>)
         template = self.x_component_handler.process(template, context, self)
-
-        # Process @component (legacy syntax)
-        template = self.component_handler.process(template, context, self)
 
         # Process @include
         template = self.include_handler.process(template, context, self)

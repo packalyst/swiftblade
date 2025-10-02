@@ -452,21 +452,6 @@ Attributes not defined in `@props()` are automatically available via `{{ $attrib
 </x-card>
 ```
 
-### Legacy Components (Deprecated)
-
-```blade
-{{-- Legacy @component syntax (still supported) --}}
-@component('components.alert', {'type': 'success'})
-    @slot('title')
-        Success!
-    @endslot
-
-    Your changes have been saved.
-@endcomponent
-```
-
-**Note:** Use X-components (`<x-name>`) instead for modern projects.
-
 ---
 
 ## Advanced Features
@@ -901,7 +886,6 @@ ${{ round(price, 2) }}
 | Directive | Description | Example |
 |-----------|-------------|---------|
 | `@props([...])` | Define component props | `@props(['variant' => 'primary'])` |
-| `@component('name')` | Legacy component | `@component('alert')...@endcomponent` |
 | `<x-name>` | Modern component | `<x-button>Click</x-button>` |
 | `<x-slot:name>` | Named slot | `<x-slot:footer>...</x-slot:footer>` |
 
