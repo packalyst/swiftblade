@@ -137,11 +137,11 @@ DEFAULT_PATTERN = re.compile(r'@default([\s\S]*?)$', re.DOTALL)
 BREAK_PATTERN = re.compile(r'@break')
 """Pattern for @break directive"""
 
-FOREACH_PATTERN = re.compile(r'@foreach\s+([\s\S]*?)@endforeach')
-"""Pattern for @foreach loop"""
+FOREACH_PATTERN = re.compile(r'@foreach\s*\((.*?)\)\s*([\s\S]*?)@endforeach')
+"""Pattern for @foreach loop with parentheses: @foreach(var in items)"""
 
-FOR_PATTERN = re.compile(r'@for\s+([\s\S]*?)@endfor')
-"""Pattern for @for loop"""
+FOR_PATTERN = re.compile(r'@for\s*\((.*?)\)\s*([\s\S]*?)@endfor')
+"""Pattern for @for loop with parentheses: @for(i in range(10))"""
 
 IF_PATTERN = re.compile(r'@if\(')
 """Pattern for @if directive start"""

@@ -26,14 +26,8 @@ class LoopHandler(BaseHandler):
     def _process_foreach(self, template: str, context: Dict[str, Any]) -> str:
         """Process @foreach...@endforeach"""
         def replacer(match):
-            content = match.group(1).strip()
-            lines = content.split('\n', 1)
-
-            if len(lines) < 2:
-                raise TemplateSyntaxError("Invalid @foreach syntax", context=content[:ERROR_TEMPLATE_PREVIEW_LENGTH])
-
-            loop_header = lines[0].strip()
-            loop_body = lines[1]
+            loop_header = match.group(1).strip()
+            loop_body = match.group(2)
 
             # Parse header: "item in items"
             try:
@@ -88,14 +82,8 @@ class LoopHandler(BaseHandler):
     def _process_for(self, template: str, context: Dict[str, Any]) -> str:
         """Process @for...@endfor"""
         def replacer(match):
-            content = match.group(1).strip()
-            lines = content.split('\n', 1)
-
-            if len(lines) < 2:
-                raise TemplateSyntaxError("Invalid @for syntax", context=content[:ERROR_TEMPLATE_PREVIEW_LENGTH])
-
-            loop_header = lines[0].strip()
-            loop_body = lines[1]
+            loop_header = match.group(1).strip()
+            loop_body = match.group(2)
 
             # Parse header: "i in range(3)"
             try:
