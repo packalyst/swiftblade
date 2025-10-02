@@ -131,15 +131,34 @@ class SafeEvaluator:
                             context=expr
                         )
 
-            # Helper function for isset() - checks if variable exists in context
+            # Helper functions
             def isset(var_name):
                 """Check if a variable is defined in the context"""
                 return var_name in context and context[var_name] is not None
 
+            def first(collection, default=None):
+                """Get first item from collection"""
+                try:
+                    return collection[0] if collection else default
+                except (IndexError, TypeError, KeyError):
+                    return default
+
+            def last(collection, default=None):
+                """Get last item from collection"""
+                try:
+                    return collection[-1] if collection else default
+                except (IndexError, TypeError, KeyError):
+                    return default
+
+            def default_or(value, default=''):
+                """Return default if value is None or empty"""
+                return value if value else default
+
             # Compile and evaluate with safe builtins
+            import json
+
             safe_builtins = {
-                "range": range,
-                "len": len,
+                # Type constructors
                 "str": str,
                 "int": int,
                 "float": float,
@@ -148,17 +167,53 @@ class SafeEvaluator:
                 "dict": dict,
                 "tuple": tuple,
                 "set": set,
+
+                # Iteration & ranges
+                "range": range,
                 "enumerate": enumerate,
                 "zip": zip,
+
+                # Higher-order functions
                 "map": map,
                 "filter": filter,
+
+                # Collection operations
+                "len": len,
                 "sorted": sorted,
                 "sum": sum,
                 "min": min,
                 "max": max,
+                "first": first,
+                "last": last,
+                "count": len,  # Alias for len
+
+                # Math
                 "abs": abs,
                 "round": round,
+
+                # String operations
+                "upper": str.upper,
+                "lower": str.lower,
+                "capitalize": str.capitalize,
+                "title": str.title,
+                "strip": str.strip,
+                "replace": str.replace,
+                "split": str.split,
+                "join": str.join,
+
+                # JSON
+                "json_encode": json.dumps,
+                "json_decode": json.loads,
+
+                # Type checks
+                "is_list": lambda x: isinstance(x, list),
+                "is_dict": lambda x: isinstance(x, dict),
+                "is_string": lambda x: isinstance(x, str),
+                "is_number": lambda x: isinstance(x, (int, float)),
+
+                # Template helpers
                 "isset": isset,
+                "default": default_or,
             }
             code = compile(node, '<string>', 'eval')
             return eval(code, {"__builtins__": safe_builtins}, context)

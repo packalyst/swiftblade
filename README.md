@@ -589,6 +589,274 @@ html = engine.render('page.html', context)
 
 ---
 
+## Built-in Functions Reference
+
+SwiftBlade includes a comprehensive set of built-in functions available in all templates without any configuration.
+
+### Type Constructors
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `str(value)` | Convert to string | `{{ str(123) }}` → `"123"` |
+| `int(value)` | Convert to integer | `{{ int("42") }}` → `42` |
+| `float(value)` | Convert to float | `{{ float("3.14") }}` → `3.14` |
+| `bool(value)` | Convert to boolean | `{{ bool(1) }}` → `True` |
+| `list(iterable)` | Convert to list | `{{ list(range(3)) }}` → `[0, 1, 2]` |
+| `dict()` | Create dictionary | `{{ dict(a=1, b=2) }}` → `{'a': 1, 'b': 2}` |
+| `tuple(iterable)` | Create tuple | `{{ tuple([1, 2]) }}` → `(1, 2)` |
+| `set(iterable)` | Create set | `{{ set([1, 1, 2]) }}` → `{1, 2}` |
+
+**Examples:**
+```blade
+{{ str(user.id) }}  {{-- Convert ID to string --}}
+{{ int(request.query.page) }}  {{-- Parse page number --}}
+{{ float(product.price) }}  {{-- Ensure price is float --}}
+```
+
+### Collection Operations
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `len(collection)` | Get length/count | `{{ len(items) }}` → `5` |
+| `count(collection)` | Alias for len | `{{ count(users) }}` → `10` |
+| `first(collection, default=None)` | Get first item | `{{ first(items) }}` |
+| `last(collection, default=None)` | Get last item | `{{ last(items) }}` |
+| `sorted(iterable)` | Sort collection | `{{ sorted(numbers) }}` |
+| `sum(iterable)` | Sum of numbers | `{{ sum([1, 2, 3]) }}` → `6` |
+| `min(iterable)` | Minimum value | `{{ min(prices) }}` |
+| `max(iterable)` | Maximum value | `{{ max(scores) }}` |
+
+**Examples:**
+```blade
+{{-- Get collection length --}}
+<p>Total: {{ len(products) }} products</p>
+<p>{{ count(users) }} users online</p>
+
+{{-- Get first/last with fallback --}}
+{{ first(items, 'No items') }}
+{{ last(history, 'No history') }}
+
+{{-- Sort and aggregate --}}
+@foreach(product in sorted(products))
+    {{ product.name }}
+@endforeach
+
+<p>Total price: ${{ sum(cart.prices) }}</p>
+<p>Cheapest: ${{ min(prices) }}</p>
+<p>Most expensive: ${{ max(prices) }}</p>
+```
+
+### String Operations
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `upper(string)` | Convert to uppercase | `{{ upper("hello") }}` → `"HELLO"` |
+| `lower(string)` | Convert to lowercase | `{{ lower("WORLD") }}` → `"world"` |
+| `capitalize(string)` | Capitalize first char | `{{ capitalize("hello") }}` → `"Hello"` |
+| `title(string)` | Title case | `{{ title("hello world") }}` → `"Hello World"` |
+| `strip(string)` | Remove whitespace | `{{ strip("  hi  ") }}` → `"hi"` |
+| `replace(str, old, new)` | Replace substring | `{{ replace(text, "old", "new") }}` |
+| `split(string, sep)` | Split string | `{{ split("a,b,c", ",") }}` → `['a','b','c']` |
+| `join(separator, list)` | Join list | `{{ join(", ", items) }}` |
+
+**Examples:**
+```blade
+{{-- Case conversion --}}
+<h1>{{ upper(title) }}</h1>  {{-- WELCOME --}}
+<p>{{ title(user.name) }}</p>  {{-- John Doe --}}
+
+{{-- Clean input --}}
+{{ strip(user_input) }}
+
+{{-- String manipulation --}}
+{{ replace(content, "\n", "<br>") }}
+{{ join(", ", tags) }}  {{-- "python, web, api" --}}
+
+@foreach(word in split(sentence, " "))
+    <span>{{ word }}</span>
+@endforeach
+```
+
+### JSON Operations
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `json_encode(value)` | Encode to JSON | `{{ json_encode(data) }}` |
+| `json_decode(string)` | Decode from JSON | `{{ json_decode('{"a":1}') }}` |
+
+**Examples:**
+```blade
+{{-- Pass Python data to JavaScript --}}
+<script>
+    var userData = {!! json_encode(user) !!};
+    var settings = {!! json_encode(app_settings) !!};
+</script>
+
+{{-- Parse JSON string --}}
+@foreach(item in json_decode(json_string))
+    {{ item.name }}
+@endforeach
+```
+
+### Math Operations
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `abs(number)` | Absolute value | `{{ abs(-5) }}` → `5` |
+| `round(number, digits=0)` | Round number | `{{ round(3.14159, 2) }}` → `3.14` |
+
+**Examples:**
+```blade
+<p>Temperature: {{ abs(temperature) }}°C</p>
+<p>Price: ${{ round(price, 2) }}</p>
+<p>Count: {{ round(average) }}</p>
+```
+
+### Iteration Helpers
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `range(stop)` | Create range | `{{ range(5) }}` → `[0,1,2,3,4]` |
+| `range(start, stop)` | Create range | `{{ range(1, 4) }}` → `[1,2,3]` |
+| `enumerate(iterable)` | Index + value pairs | `enumerate(items)` |
+| `zip(iter1, iter2)` | Combine iterables | `zip(names, ages)` |
+| `map(func, iterable)` | Apply function | `map(upper, names)` |
+| `filter(func, iterable)` | Filter items | `filter(is_active, users)` |
+
+**Examples:**
+```blade
+{{-- Generate numbers --}}
+@for(i in range(5))
+    <div>Item {{ i }}</div>
+@endfor
+
+@for(i in range(1, 11))
+    <p>{{ i }}. Product</p>
+@endfor
+
+{{-- Enumerate with index --}}
+@foreach((index, item) in enumerate(products))
+    <tr>
+        <td>{{ index + 1 }}</td>
+        <td>{{ item.name }}</td>
+    </tr>
+@endforeach
+
+{{-- Zip parallel lists --}}
+@foreach((name, age) in zip(names, ages))
+    <p>{{ name }} is {{ age }} years old</p>
+@endforeach
+```
+
+### Type Checking
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `is_list(value)` | Check if list | `{{ is_list(items) }}` → `True/False` |
+| `is_dict(value)` | Check if dict | `{{ is_dict(data) }}` → `True/False` |
+| `is_string(value)` | Check if string | `{{ is_string(text) }}` → `True/False` |
+| `is_number(value)` | Check if number | `{{ is_number(count) }}` → `True/False` |
+
+**Examples:**
+```blade
+@if(is_list(data))
+    @foreach(item in data)
+        {{ item }}
+    @endforeach
+@elseif(is_dict(data))
+    @foreach((key, value) in data.items())
+        {{ key }}: {{ value }}
+    @endforeach
+@else
+    {{ data }}
+@endif
+
+@if(is_string(value))
+    <p>String: {{ value }}</p>
+@endif
+
+@if(is_number(age))
+    <p>Age: {{ age }} years</p>
+@endif
+```
+
+### Template Helpers
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `isset(var_name)` | Check if var exists | `{{ isset('user') }}` → `True/False` |
+| `default(value, fallback='')` | Fallback value | `{{ default(title, 'Untitled') }}` |
+
+**Examples:**
+```blade
+{{-- Check variable existence --}}
+@if(isset('user'))
+    Hello, {{ user.name }}!
+@endif
+
+{{-- Provide defaults --}}
+<img src="{{ default(user.avatar, '/default-avatar.png') }}" />
+<h1>{{ default(page_title, 'Welcome') }}</h1>
+<p>{{ default(description, 'No description available') }}</p>
+
+{{-- Chain with other operations --}}
+{{ upper(default(user.name, 'guest')) }}  {{-- GUEST --}}
+```
+
+### Combining Functions
+
+Functions can be combined for powerful transformations:
+
+```blade
+{{-- Uppercase first item --}}
+{{ upper(first(items, 'none')) }}
+
+{{-- Count filtered items --}}
+{{ len(filter(lambda x: x.active, users)) }}
+
+{{-- Format list as string --}}
+{{ join(", ", map(upper, tags)) }}  {{-- "PYTHON, WEB, API" --}}
+
+{{-- Safe chain with defaults --}}
+{{ title(strip(default(user.bio, 'No bio'))) }}
+
+{{-- JSON encode sorted data --}}
+<script>
+    var data = {!! json_encode(sorted(items, key=lambda x: x.name)) !!};
+</script>
+```
+
+### Common Patterns
+
+**Display count with pluralization:**
+```blade
+{{ count(items) }} item{{ count(items) != 1 ? 's' : '' }}
+```
+
+**Format list of names:**
+```blade
+{{ join(", ", map(title, names)) }}
+```
+
+**Get first 5 items:**
+```blade
+@foreach(item in list(sorted(items))[:5])
+    {{ item }}
+@endforeach
+```
+
+**Safe navigation with default:**
+```blade
+{{ default(user.profile.bio, 'No bio available') }}
+```
+
+**Format prices:**
+```blade
+${{ round(price, 2) }}
+```
+
+---
+
 ## Complete Directive Reference
 
 ### Control Structures
