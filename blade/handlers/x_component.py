@@ -152,7 +152,7 @@ class XComponentHandler(ComponentBase):
 
         # Ensure common slot names always exist with empty defaults
         # This allows @if(slotname) to work without NameError
-        common_slots = ['header', 'body', 'footer', 'title', 'actions']
+        common_slots = ['header', 'body', 'footer', 'actions']
         for slot_name in common_slots:
             if slot_name not in slots:
                 slots[slot_name] = SafeString('')
