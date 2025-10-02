@@ -150,13 +150,6 @@ class XComponentHandler(ComponentBase):
         # Process @props directive in component template
         props_defaults = self._extract_props(component_template)
 
-        # Ensure common slot names always exist with empty defaults
-        # This allows @if(slotname) to work without NameError
-        common_slots = ['header', 'body', 'footer', 'actions']
-        for slot_name in common_slots:
-            if slot_name not in slots:
-                slots[slot_name] = SafeString('')
-
         # Merge contexts: defaults < attributes < slots
         component_data = {**props_defaults, **attributes}
 

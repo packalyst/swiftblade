@@ -88,6 +88,9 @@ class ConditionalHandler(BaseHandler):
                 from . import ControlStructureHandler
                 ctrl_handler = ControlStructureHandler(self.engine)
                 return ctrl_handler.process(true_block, context)
+        except NameError:
+            # Undefined variable in condition - treat as falsy
+            pass
         except Exception as e:
             raise TemplateSyntaxError(f"Error in @if condition: {e}", context=condition.strip())
 
