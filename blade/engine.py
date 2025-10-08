@@ -413,6 +413,10 @@ class BladeEngine:
             from .exceptions import SecurityError
             raise SecurityError(f"Absolute template paths are not allowed: {template_name}")
 
+        # Convert dot notation to slashes (Laravel Blade style)
+        # This allows: 'pages.home' -> 'pages/home'
+        template_name = template_name.replace('.', '/')
+
         # Normalize path and strip leading slashes
         template_name = os.path.normpath(template_name).lstrip('/').lstrip('\\')
 
