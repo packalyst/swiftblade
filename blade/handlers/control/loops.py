@@ -74,6 +74,12 @@ class LoopHandler(BaseHandler):
             try:
                 loop_var, iterable_expr = loop_header.split(' in ', 1)
                 loop_var = loop_var.strip()
+
+                # DEBUG
+                print(f"DEBUG: Evaluating foreach: {loop_var} in {iterable_expr}")
+                print(f"DEBUG: Available context keys: {list(context.keys())}")
+
+                # Try to evaluate the iterable expression
                 iterable = self.evaluator.safe_eval(iterable_expr.strip(), context)
             except Exception as e:
                 raise TemplateSyntaxError(f"Error in @foreach header: {e}", context=loop_header)
