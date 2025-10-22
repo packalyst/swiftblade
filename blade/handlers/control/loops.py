@@ -75,10 +75,6 @@ class LoopHandler(BaseHandler):
                 loop_var, iterable_expr = loop_header.split(' in ', 1)
                 loop_var = loop_var.strip()
 
-                # DEBUG
-                print(f"DEBUG: Evaluating foreach: {loop_var} in {iterable_expr}")
-                print(f"DEBUG: Available context keys: {list(context.keys())}")
-
                 # Try to evaluate the iterable expression
                 iterable = self.evaluator.safe_eval(iterable_expr.strip(), context)
             except Exception as e:
@@ -104,7 +100,12 @@ class LoopHandler(BaseHandler):
                         # First, recursively process any nested @foreach loops with updated context
                         rendered = self._process_foreach(loop_body, loop_context)
 
-                        # Then process variables to render {{ item }} etc.
+                        # Then process conditionals (@if/@else/@endif) within the loop body
+                        from .conditionals import ConditionalHandler
+                        cond_handler = ConditionalHandler(self.engine)
+                        rendered = cond_handler.process(rendered, loop_context)
+
+                        # Finally process variables to render {{ item }} etc.
                         from ..variables import VariableHandler
                         var_handler = VariableHandler(self.engine)
                         rendered = var_handler.process(rendered, loop_context)
@@ -163,7 +164,12 @@ class LoopHandler(BaseHandler):
                         # First, recursively process any nested @for loops with updated context
                         rendered = self._process_for(loop_body, loop_context)
 
-                        # Then process variables to render {{ item }} etc.
+                        # Then process conditionals (@if/@else/@endif) within the loop body
+                        from .conditionals import ConditionalHandler
+                        cond_handler = ConditionalHandler(self.engine)
+                        rendered = cond_handler.process(rendered, loop_context)
+
+                        # Finally process variables to render {{ item }} etc.
                         from ..variables import VariableHandler
                         var_handler = VariableHandler(self.engine)
                         rendered = var_handler.process(rendered, loop_context)
