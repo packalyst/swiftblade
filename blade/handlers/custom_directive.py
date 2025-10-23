@@ -32,30 +32,44 @@ class CustomDirectiveHandler(BaseHandler):
         """
         Process a single custom directive
 
-        Pattern: @directiveName(args)
+        Supports both patterns:
+        - @directiveName(args)  - with arguments
+        - @directiveName        - without parentheses (calls with empty args)
         """
-        # Build regex pattern for this directive
-        # Matches: @directiveName(...)
-        pattern = rf'@{directive_name}\s*\(((?:[^()]*|\([^)]*\))*)\)'
+        # Pattern 1: @directiveName(...) - with parentheses
+        pattern_with_parens = rf'@{directive_name}\s*\(((?:[^()]*|\([^)]*\))*)\)'
 
-        def replacer(match):
-            """Replace directive with processed output"""
+        # Pattern 2: @directiveName - without parentheses (must not be followed by '(')
+        pattern_without_parens = rf'@{directive_name}(?!\s*\()'
+
+        def replacer_with_args(match):
+            """Replace directive with arguments"""
             args_str = match.group(1).strip()
-
-            # Parse arguments
             args = self._parse_args(args_str, context)
 
-            # Call the directive handler
             try:
                 result = self.engine.directive_registry.process(directive_name, args, context)
-                # Wrap in SafeString so directive output is NOT escaped (like Laravel Blade)
                 return SafeString(str(result)) if result is not None else ''
             except Exception as e:
-                # Log error but don't crash
                 print(f"Error in @{directive_name}: {e}")
-                return match.group(0)  # Return original if error
+                return match.group(0)
 
-        return re.sub(pattern, replacer, template)
+        def replacer_without_args(match):
+            """Replace directive without arguments (call with empty args list)"""
+            try:
+                result = self.engine.directive_registry.process(directive_name, [], context)
+                return SafeString(str(result)) if result is not None else ''
+            except Exception as e:
+                print(f"Error in @{directive_name}: {e}")
+                return match.group(0)
+
+        # First, replace directives WITH parentheses
+        template = re.sub(pattern_with_parens, replacer_with_args, template)
+
+        # Then, replace directives WITHOUT parentheses
+        template = re.sub(pattern_without_parens, replacer_without_args, template)
+
+        return template
 
     def _parse_args(self, args_str: str, context: Dict[str, Any]) -> list:
         """
