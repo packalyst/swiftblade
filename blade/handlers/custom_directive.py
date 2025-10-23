@@ -64,14 +64,17 @@ class CustomDirectiveHandler(BaseHandler):
         Example:
             'hello', 'world' -> ['hello', 'world']
             name, 24 -> [value_of_name, 24]
+            'route', {'key': 'value'} -> ['route', {'key': 'value'}]
         """
         if not args_str:
             return []
 
-        # Split by commas (but respect quotes and parentheses)
+        # Split by commas (but respect quotes, parentheses, and braces)
         args = []
         current_arg = ''
         paren_depth = 0
+        brace_depth = 0
+        bracket_depth = 0
         in_string = False
         string_char = None
 
@@ -90,7 +93,19 @@ class CustomDirectiveHandler(BaseHandler):
             elif char == ')' and not in_string:
                 paren_depth -= 1
                 current_arg += char
-            elif char == ',' and paren_depth == 0 and not in_string:
+            elif char == '{' and not in_string:
+                brace_depth += 1
+                current_arg += char
+            elif char == '}' and not in_string:
+                brace_depth -= 1
+                current_arg += char
+            elif char == '[' and not in_string:
+                bracket_depth += 1
+                current_arg += char
+            elif char == ']' and not in_string:
+                bracket_depth -= 1
+                current_arg += char
+            elif char == ',' and paren_depth == 0 and brace_depth == 0 and bracket_depth == 0 and not in_string:
                 if current_arg.strip():
                     args.append(current_arg.strip())
                 current_arg = ''
