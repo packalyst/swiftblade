@@ -42,7 +42,7 @@ pip install -e .
 ### Basic Usage
 
 ```python
-from blade import BladeEngine
+from swiftblade import BladeEngine
 
 # Initialize engine
 engine = BladeEngine(template_dir="views")
@@ -459,7 +459,7 @@ Attributes not defined in `@props()` are automatically available via `{{ $attrib
 ### Custom Directives
 
 ```python
-from blade import BladeEngine
+from swiftblade import BladeEngine
 
 engine = BladeEngine()
 
@@ -499,7 +499,7 @@ engine.register_directive('datetime', datetime_directive)
 ### Global Functions & Helpers
 
 ```python
-from blade import BladeEngine
+from swiftblade import BladeEngine
 
 engine = BladeEngine()
 
@@ -556,7 +556,7 @@ engine = BladeEngine(
 ### SafeString (Prevent Double-Escaping)
 
 ```python
-from blade.utils.safe_string import SafeString
+from swiftblade.utils.safe_string import SafeString
 
 # Mark strings as already-safe HTML
 html_content = SafeString('<div>Safe HTML</div>')
@@ -905,7 +905,7 @@ ${{ round(price, 2) }}
 
 ```python
 from flask import Flask
-from blade import BladeEngine
+from swiftblade import BladeEngine
 
 app = Flask(__name__)
 blade = BladeEngine(template_dir='templates')
@@ -925,7 +925,7 @@ if __name__ == '__main__':
 
 ```python
 from sanic import Sanic, response
-from blade import BladeEngine
+from swiftblade import BladeEngine
 
 app = Sanic(__name__)
 blade = BladeEngine(template_dir='views')
@@ -947,7 +947,7 @@ if __name__ == '__main__':
 ```python
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
-from blade import BladeEngine
+from swiftblade import BladeEngine
 
 app = FastAPI()
 blade = BladeEngine(template_dir='templates')
@@ -964,7 +964,7 @@ async def index():
 
 ```python
 # settings.py
-from blade import BladeEngine
+from swiftblade import BladeEngine
 
 BLADE_ENGINE = BladeEngine(
     template_dir=BASE_DIR / 'templates',
@@ -1015,7 +1015,7 @@ Benchmarks on standard hardware (single-threaded):
 - `SafeString` - Mark pre-escaped HTML as safe
 
 ```python
-from blade.utils.safe_string import SafeString
+from swiftblade.utils.safe_string import SafeString
 
 # This won't be escaped
 safe_html = SafeString('<b>Bold text</b>')
