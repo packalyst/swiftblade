@@ -14,5 +14,5 @@ class BaseHandler:
 
     def __init__(self, engine: 'BladeEngine'):
         self.engine = engine
-        from ..evaluator import SafeEvaluator
-        self.evaluator = SafeEvaluator()
+        # Use shared evaluator instance for better performance
+        self.evaluator = engine._shared_evaluator

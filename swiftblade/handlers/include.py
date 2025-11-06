@@ -42,7 +42,7 @@ class IncludeHandler(BaseHandler):
         return template
 
     def _get_included(self, template_name: str, context: Dict[str, Any], parser) -> str:
-        """Load and process included template"""
+        """Load and process included template (uses engine cache)"""
         # Check recursion depth (DoS prevention)
         parser._recursion_depth += 1
         if parser._recursion_depth > self.engine.max_recursion_depth:
@@ -56,11 +56,22 @@ class IncludeHandler(BaseHandler):
             # Use engine's template resolution to handle file extensions
             template_path = self.engine._resolve_template_path(template_name)
 
-            if not os.path.exists(template_path):
-                raise TemplateNotFoundException(f"Included template '{template_name}' not found", template_name=template_name)
+            # Try to get from cache first
+            included_template = None
+            if self.engine.cache:
+                included_template = self.engine.cache.get(template_path)
 
-            with open(template_path, "r", encoding=self.engine.encoding) as f:
-                included_template = f.read()
+            # If not in cache, read from disk
+            if included_template is None:
+                if not os.path.exists(template_path):
+                    raise TemplateNotFoundException(f"Included template '{template_name}' not found", template_name=template_name)
+
+                with open(template_path, "r", encoding=self.engine.encoding) as f:
+                    included_template = f.read()
+
+                # Store in cache for future use
+                if self.engine.cache:
+                    self.engine.cache.store(template_path, included_template)
 
             # Process included template
             return parser.process_template(included_template, context)

@@ -171,13 +171,13 @@ X_COMPONENT_PAIRED_NESTED_PATTERN = re.compile(
 X_PROPS_PATTERN = re.compile(r'@props\(\s*\[.*?\]\s*\)', re.DOTALL)
 """Pattern for @props directive"""
 
-X_DYNAMIC_ATTR_PATTERN = re.compile(r':([a-z0-9\-_]+)\s*=\s*"([^"]*)"', re.IGNORECASE)
+X_DYNAMIC_ATTR_PATTERN = re.compile(r':([a-z0-9\-_\.]+)\s*=\s*"([^"]*)"', re.IGNORECASE)
 """Pattern for dynamic attributes: :title="value" """
 
-X_STATIC_ATTR_PATTERN = re.compile(r'([a-z0-9\-_]+)\s*=\s*"([^"]*)"', re.IGNORECASE)
-"""Pattern for static attributes: title="value" """
+X_STATIC_ATTR_PATTERN = re.compile(r'([a-z0-9\-_\.]+)\s*=\s*"([^"]*)"', re.IGNORECASE)
+"""Pattern for static attributes: title="value" (supports dots for Alpine modifiers like x-model.number) """
 
-X_BOOLEAN_ATTR_PATTERN = re.compile(r'\b([a-z0-9\-_]+)\b', re.IGNORECASE)
+X_BOOLEAN_ATTR_PATTERN = re.compile(r'\b([a-z0-9\-_\.]+)\b', re.IGNORECASE)
 """Pattern for boolean attributes"""
 
 X_SLOT_COLON_PATTERN = re.compile(

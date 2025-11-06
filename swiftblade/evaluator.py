@@ -5,6 +5,7 @@ Prevents code injection attacks
 """
 
 import ast
+import json
 from typing import Any, Dict
 
 from .exceptions import SecurityError, DirectiveError
@@ -75,6 +76,60 @@ class SafeEvaluator:
         ast.Continue,
         ast.Pass,
     )
+
+    # Safe builtins (shared across all evaluations for performance)
+    _SAFE_BUILTINS_BASE = {
+        # Type constructors
+        "str": str,
+        "int": int,
+        "float": float,
+        "bool": bool,
+        "list": list,
+        "dict": dict,
+        "tuple": tuple,
+        "set": set,
+
+        # Iteration & ranges
+        "range": range,
+        "enumerate": enumerate,
+        "zip": zip,
+
+        # Higher-order functions
+        "map": map,
+        "filter": filter,
+
+        # Collection operations
+        "len": len,
+        "sorted": sorted,
+        "sum": sum,
+        "min": min,
+        "max": max,
+        "count": len,  # Alias for len
+
+        # Math
+        "abs": abs,
+        "round": round,
+
+        # String operations
+        "upper": str.upper,
+        "lower": str.lower,
+        "capitalize": str.capitalize,
+        "title": str.title,
+        "strip": str.strip,
+        "replace": str.replace,
+        "split": str.split,
+        "join": str.join,
+
+        # JSON
+        "json_encode": json.dumps,
+        "json_decode": json.loads,
+
+        # Type checks
+        "is_list": lambda x: isinstance(x, list),
+        "is_dict": lambda x: isinstance(x, dict),
+        "is_string": lambda x: isinstance(x, str),
+        "is_number": lambda x: isinstance(x, (int, float)),
+    }
 
     @classmethod
     def safe_eval(cls, expr: str, context: Dict[str, Any]) -> Any:
@@ -154,69 +209,20 @@ class SafeEvaluator:
                 """Return default if value is None or empty"""
                 return value if value else default
 
-            # Compile and evaluate with safe builtins
-            import json
-
+            # Merge base builtins with context-dependent helpers
             safe_builtins = {
-                # Type constructors
-                "str": str,
-                "int": int,
-                "float": float,
-                "bool": bool,
-                "list": list,
-                "dict": dict,
-                "tuple": tuple,
-                "set": set,
-
-                # Iteration & ranges
-                "range": range,
-                "enumerate": enumerate,
-                "zip": zip,
-
-                # Higher-order functions
-                "map": map,
-                "filter": filter,
-
-                # Collection operations
-                "len": len,
-                "sorted": sorted,
-                "sum": sum,
-                "min": min,
-                "max": max,
+                **cls._SAFE_BUILTINS_BASE,
                 "first": first,
                 "last": last,
-                "count": len,  # Alias for len
-
-                # Math
-                "abs": abs,
-                "round": round,
-
-                # String operations
-                "upper": str.upper,
-                "lower": str.lower,
-                "capitalize": str.capitalize,
-                "title": str.title,
-                "strip": str.strip,
-                "replace": str.replace,
-                "split": str.split,
-                "join": str.join,
-
-                # JSON
-                "json_encode": json.dumps,
-                "json_decode": json.loads,
-
-                # Type checks
-                "is_list": lambda x: isinstance(x, list),
-                "is_dict": lambda x: isinstance(x, dict),
-                "is_string": lambda x: isinstance(x, str),
-                "is_number": lambda x: isinstance(x, (int, float)),
-
-                # Template helpers
                 "isset": isset,
                 "default": default_or,
             }
+            # Add 'context' to namespace so expressions can use context.get()
+            eval_namespace = context.copy()
+            eval_namespace['context'] = context
+
             code = compile(node, '<string>', 'eval')
-            return eval(code, {"__builtins__": safe_builtins}, context)
+            return eval(code, {"__builtins__": safe_builtins}, eval_namespace)
 
         except SecurityError:
             raise

@@ -178,13 +178,16 @@ class ComponentBase(BaseHandler):
         Returns:
             Merged context dictionary
         """
-        # Create copy to avoid modifying original
-        merged = base_context.copy()
+        # Start with engine globals (like icon, url, route, etc.)
+        merged = self.engine.get_globals().copy()
 
-        # Add component data
+        # Add base context (from parent template)
+        merged.update(base_context)
+
+        # Add component data (from @props and attributes)
         merged.update(component_data)
 
-        # Add slots
+        # Add slots (highest priority)
         merged.update(slots)
 
         return merged

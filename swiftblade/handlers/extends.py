@@ -31,11 +31,22 @@ class ExtendsHandler(BaseHandler):
         # Use engine's template resolution to handle file extensions
         parent_path = self.engine._resolve_template_path(parent_name)
 
-        if not os.path.exists(parent_path):
-            raise TemplateNotFoundException(f"Parent template '{parent_name}' not found", template_name=parent_name)
+        # Try to get from cache first
+        parent_template = None
+        if self.engine.cache:
+            parent_template = self.engine.cache.get(parent_path)
 
-        with open(parent_path, "r", encoding=self.engine.encoding) as f:
-            parent_template = f.read()
+        # If not in cache, read from disk
+        if parent_template is None:
+            if not os.path.exists(parent_path):
+                raise TemplateNotFoundException(f"Parent template '{parent_name}' not found", template_name=parent_name)
+
+            with open(parent_path, "r", encoding=self.engine.encoding) as f:
+                parent_template = f.read()
+
+            # Store in cache for future use
+            if self.engine.cache:
+                self.engine.cache.store(parent_path, parent_template)
 
         # Remove @extends from child
         template = EXTENDS_PATTERN.sub('', template)

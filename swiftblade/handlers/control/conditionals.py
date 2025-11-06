@@ -1,9 +1,10 @@
 """
 Conditional Handler
 Handles @if/@elseif/@else/@endif directives
+Optimized with depth-aware parsing and control handler caching
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from ..base import BaseHandler
 from ...exceptions import TemplateSyntaxError
@@ -11,7 +12,18 @@ from ...constants import IF_PATTERN, ENDIF_PATTERN
 
 
 class ConditionalHandler(BaseHandler):
-    """Handles @if/@elseif/@else/@endif conditional structures"""
+    """Handles @if/@elseif/@else/@endif conditional structures (optimized)"""
+
+    def __init__(self, engine):
+        super().__init__(engine)
+        self._ctrl_handler_cache = None  # Lazy-load control handler
+
+    def _get_ctrl_handler(self):
+        """Get cached control structure handler (lazy initialization)"""
+        if self._ctrl_handler_cache is None:
+            from . import ControlStructureHandler
+            self._ctrl_handler_cache = ControlStructureHandler(self.engine)
+        return self._ctrl_handler_cache
 
     def process(self, template: str, context: Dict[str, Any]) -> str:
         """Process @if...@endif"""
@@ -74,19 +86,20 @@ class ConditionalHandler(BaseHandler):
         return result
 
     def _process_if_block(self, condition: str, body: str, context: Dict[str, Any]) -> str:
-        """Process a single @if block with @elseif and @else"""
+        """Process a single @if block with @elseif and @else (depth-aware)"""
         import re
 
-        # Split into @if, @elseif, @else blocks
-        parts = re.split(r'(@elseif\(.*?\)|@else)', body)
+        # Split into @if, @elseif, @else blocks with depth awareness
+        parts = self._split_conditional_branches(body)
+
+        # Get cached control handler
+        ctrl_handler = self._get_ctrl_handler()
 
         # Evaluate @if condition
         try:
             if self.evaluator.safe_eval(condition.strip(), context):
-                true_block = parts[0] if parts else ''
+                true_block = parts[0]['body'] if parts else ''
                 # Need to recursively process for nested control structures
-                from . import ControlStructureHandler
-                ctrl_handler = ControlStructureHandler(self.engine)
                 return ctrl_handler.process(true_block, context)
         except (NameError, Exception) as e:
             # Check if it's an undefined variable error - treat as falsy
@@ -96,35 +109,93 @@ class ConditionalHandler(BaseHandler):
                 raise TemplateSyntaxError(f"Error in @if condition: {e}", context=condition.strip())
 
         # Check @elseif and @else
-        i = 1
-        while i < len(parts):
-            directive = parts[i]
+        for i in range(1, len(parts)):
+            branch = parts[i]
 
-            if directive.startswith('@elseif'):
-                # Extract balanced parens for @elseif
-                elseif_paren_pos = directive.find('(')
-                if elseif_paren_pos != -1:
-                    elseif_cond = self._extract_balanced_parens(directive, elseif_paren_pos)
-                    if elseif_cond and i + 1 < len(parts):
-                        try:
-                            if self.evaluator.safe_eval(elseif_cond.strip(), context):
-                                from . import ControlStructureHandler
-                                ctrl_handler = ControlStructureHandler(self.engine)
-                                return ctrl_handler.process(parts[i + 1], context)
-                        except Exception:
-                            pass
-                i += 2
+            if branch['type'] == 'elseif':
+                try:
+                    if self.evaluator.safe_eval(branch['condition'].strip(), context):
+                        return ctrl_handler.process(branch['body'], context)
+                except Exception:
+                    pass
 
-            elif directive == '@else':
-                if i + 1 < len(parts):
-                    from . import ControlStructureHandler
-                    ctrl_handler = ControlStructureHandler(self.engine)
-                    return ctrl_handler.process(parts[i + 1], context)
-                break
-            else:
-                i += 1
+            elif branch['type'] == 'else':
+                return ctrl_handler.process(branch['body'], context)
 
         return ''
+
+    def _split_conditional_branches(self, body: str) -> List[dict]:
+        """
+        Split body into conditional branches while respecting nested @if blocks.
+        Returns list of dicts: [{'type': 'if'|'elseif'|'else', 'condition': str, 'body': str}]
+
+        OPTIMIZED: Uses string slicing instead of character-by-character appending
+        """
+        branches = []
+        body_start = 0  # Start position of current body segment
+        depth = 0
+        i = 0
+        body_len = len(body)
+
+        # First branch is the @if body (no directive)
+        branches.append({'type': 'if', 'condition': '', 'body': ''})
+        current_branch_idx = 0
+
+        while i < body_len:
+            # Check for nested @if
+            if i + 4 <= body_len and body[i:i+4] == '@if(':
+                depth += 1
+                i += 4
+                continue
+
+            # Check for @endif
+            if i + 6 <= body_len and body[i:i+6] == '@endif':
+                if depth > 0:
+                    depth -= 1
+                    i += 6
+                    continue
+
+            # Only process @elseif/@else at depth 0 (not inside nested @if)
+            if depth == 0:
+                # Check for @elseif
+                if i + 8 <= body_len and body[i:i+8] == '@elseif(':
+                    # Save current branch body using string slice
+                    branches[current_branch_idx]['body'] = body[body_start:i]
+
+                    # Extract condition
+                    paren_start = i + 7
+                    condition = self._extract_balanced_parens(body, paren_start)
+
+                    # Add new elseif branch
+                    branches.append({'type': 'elseif', 'condition': condition, 'body': ''})
+                    current_branch_idx += 1
+
+                    # Move past @elseif(condition)
+                    i = paren_start + len(condition) + 2  # +2 for ()
+                    body_start = i
+                    continue
+
+                # Check for @else (but not @elseif)
+                if i + 5 <= body_len and body[i:i+5] == '@else':
+                    # Check it's not @elseif (already handled above)
+                    if i + 6 > body_len or body[i+5] != 'i':
+                        # Save current branch body using string slice
+                        branches[current_branch_idx]['body'] = body[body_start:i]
+
+                        # Add new else branch
+                        branches.append({'type': 'else', 'condition': '', 'body': ''})
+                        current_branch_idx += 1
+
+                        i += 5
+                        body_start = i
+                        continue
+
+            i += 1
+
+        # Save final branch body using string slice
+        branches[current_branch_idx]['body'] = body[body_start:]
+
+        return branches
 
     def _extract_balanced_parens(self, text: str, start_pos: int) -> str:
         """Extract content within balanced parentheses starting from start_pos"""

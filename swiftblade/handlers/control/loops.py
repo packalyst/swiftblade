@@ -4,6 +4,7 @@ Handles @foreach and @for loop directives
 """
 
 from typing import Dict, Any
+from collections import ChainMap
 
 from ..base import BaseHandler
 from ...exceptions import TemplateSyntaxError, BreakLoop, ContinueLoop, SecurityError
@@ -12,6 +13,26 @@ from ...constants import ERROR_TEMPLATE_PREVIEW_LENGTH, FOREACH_PATTERN, FOR_PAT
 
 class LoopHandler(BaseHandler):
     """Handles @foreach and @for loop structures"""
+
+    def __init__(self, engine):
+        super().__init__(engine)
+        # Reusable handlers to avoid creating new instances in loops
+        self._cond_handler = None
+        self._var_handler = None
+
+    def _get_cond_handler(self):
+        """Lazy-load conditional handler (reused across loop iterations)"""
+        if self._cond_handler is None:
+            from .conditionals import ConditionalHandler
+            self._cond_handler = ConditionalHandler(self.engine)
+        return self._cond_handler
+
+    def _get_var_handler(self):
+        """Lazy-load variable handler (reused across loop iterations)"""
+        if self._var_handler is None:
+            from ..variables import VariableHandler
+            self._var_handler = VariableHandler(self.engine)
+        return self._var_handler
 
     def process(self, template: str, context: Dict[str, Any]) -> str:
         """Process @foreach and @for loops"""
@@ -81,7 +102,10 @@ class LoopHandler(BaseHandler):
                 raise TemplateSyntaxError(f"Error in @foreach header: {e}", context=loop_header)
 
             output = []
-            local_context = context.copy()
+
+            # Get reusable handlers once
+            cond_handler = self._get_cond_handler()
+            var_handler = self._get_var_handler()
 
             try:
                 # Iteration limit (DoS prevention)
@@ -93,21 +117,17 @@ class LoopHandler(BaseHandler):
                             context=f"@foreach {loop_header}"
                         )
 
-                    loop_context = local_context.copy()
-                    loop_context[loop_var] = value
+                    # Use ChainMap to avoid copying entire context dict
+                    loop_context = ChainMap({loop_var: value}, context)
 
                     try:
                         # First, recursively process any nested @foreach loops with updated context
                         rendered = self._process_foreach(loop_body, loop_context)
 
                         # Then process conditionals (@if/@else/@endif) within the loop body
-                        from .conditionals import ConditionalHandler
-                        cond_handler = ConditionalHandler(self.engine)
                         rendered = cond_handler.process(rendered, loop_context)
 
                         # Finally process variables to render {{ item }} etc.
-                        from ..variables import VariableHandler
-                        var_handler = VariableHandler(self.engine)
                         rendered = var_handler.process(rendered, loop_context)
                         output.append(rendered)
                     except ContinueLoop:
@@ -145,7 +165,10 @@ class LoopHandler(BaseHandler):
                 raise TemplateSyntaxError(f"Error in @for header: {e}", context=loop_header)
 
             output = []
-            local_context = context.copy()
+
+            # Get reusable handlers once
+            cond_handler = self._get_cond_handler()
+            var_handler = self._get_var_handler()
 
             try:
                 # Iteration limit (DoS prevention)
@@ -157,21 +180,17 @@ class LoopHandler(BaseHandler):
                             context=f"@for {loop_header}"
                         )
 
-                    loop_context = local_context.copy()
-                    loop_context[loop_var] = value
+                    # Use ChainMap to avoid copying entire context dict
+                    loop_context = ChainMap({loop_var: value}, context)
 
                     try:
                         # First, recursively process any nested @for loops with updated context
                         rendered = self._process_for(loop_body, loop_context)
 
                         # Then process conditionals (@if/@else/@endif) within the loop body
-                        from .conditionals import ConditionalHandler
-                        cond_handler = ConditionalHandler(self.engine)
                         rendered = cond_handler.process(rendered, loop_context)
 
                         # Finally process variables to render {{ item }} etc.
-                        from ..variables import VariableHandler
-                        var_handler = VariableHandler(self.engine)
                         rendered = var_handler.process(rendered, loop_context)
                         output.append(rendered)
                     except ContinueLoop:

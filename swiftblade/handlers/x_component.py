@@ -192,7 +192,10 @@ class XComponentHandler(ComponentBase):
             attr_name = match.group(1).replace('-', '_')
             expression = match.group(2)
 
-            # Evaluate expression
+            # Store original expression for pass-through
+            attributes[f'_raw_{attr_name}'] = expression
+
+            # Evaluate expression for @props
             try:
                 value = self.evaluator.safe_eval(expression, context)
                 attributes[attr_name] = value
@@ -316,14 +319,25 @@ class XComponentHandler(ComponentBase):
         """Format attributes dict as HTML attribute string"""
         parts = []
         for key, value in attributes.items():
-            html_key = key.replace('_', '-')
-            if value is True:
-                parts.append(html_key)
-            elif value is False or value is None:
+            # Skip _raw_ markers - they're used below
+            if key.startswith('_raw_'):
                 continue
+
+            # Check if there's a raw version (original : attribute)
+            raw_key = f'_raw_{key}'
+            if raw_key in attributes:
+                # Use original dynamic binding with :
+                html_key = key.replace('_', '-')
+                parts.append(f':{html_key}="{attributes[raw_key]}"')
             else:
-                # Escape quotes in value
-                safe_value = str(value).replace('"', '&quot;')
-                parts.append(f'{html_key}="{safe_value}"')
+                html_key = key.replace('_', '-')
+                if value is True:
+                    parts.append(html_key)
+                elif value is False or value is None:
+                    continue
+                else:
+                    # Escape quotes in value
+                    safe_value = str(value).replace('"', '&quot;')
+                    parts.append(f'{html_key}="{safe_value}"')
 
         return ' '.join(parts)

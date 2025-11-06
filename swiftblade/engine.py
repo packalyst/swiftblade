@@ -131,6 +131,10 @@ class BladeEngine:
         else:
             self.cache = None
 
+        # Shared evaluator instance (must be created before parser/handlers)
+        from .evaluator import SafeEvaluator
+        self._shared_evaluator = SafeEvaluator()
+
         self.compiler = TemplateCompiler()
         self.parser = TemplateParser(self)
         self.directive_registry = DirectiveRegistry()
@@ -251,6 +255,9 @@ class BladeEngine:
             raise TypeError(f"context must be dict or None, got {type(context).__name__}")
 
         context = prepare_context(context or {})
+
+        # Merge globals with context (same as render())
+        context = self._merge_context(context)
 
         try:
             return self.parser.parse(template_string, context)
